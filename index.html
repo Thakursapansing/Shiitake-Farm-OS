@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#10b981" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Shiitake Farm OS — Inventory, Audit & Multi-Flush Tracker</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/png" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #090d16; color: #f1f5f9; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-emerald-500 selection:text-slate-950">
+
+  <!-- LOGIN GATE MODAL -->
+  <div id="loginModal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-white">SHIITAKE FARM OS LOGIN</h2>
+          <p class="text-xs text-slate-400">Select Operator ID & Enter Access PIN</p>
+        </div>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1.5">Select User / Cultivator ID</label>
+          <select id="loginUserSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white text-sm font-medium focus:outline-none focus:border-emerald-500">
+            <option value="ADMIN">Admin — Sapan Thakur (Full Control & Analytics)</option>
+            <option value="C1">Cultivator 1 : A (Data Logging Only)</option>
+            <option value="C2">Cultivator 2 : K (Data Logging Only)</option>
+            <option value="C3">Cultivator 3 : P (Data Logging Only)</option>
+            <option value="C4">Cultivator 4 : K (Data Logging Only)</option>
+            <option value="C5">Cultivator 5 : S (Data Logging Only)</option>
+            <option value="C6">Cultivator 6 : T (Data Logging Only)</option>
+            <option value="C7">Cultivator 7 : X (Data Logging Only)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1.5">4-Digit Security PIN</label>
+          <input id="loginPinInput" type="password" inputmode="numeric" maxlength="6" required placeholder="Enter PIN" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono text-base tracking-widest focus:outline-none focus:border-emerald-500" />
+          <p id="loginErrorMsg" class="text-rose-400 text-[11px] mt-1.5 hidden">Invalid PIN for selected user. Please try again.</p>
+        </div>
+
+        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition">
+          Unlock Farm Terminal
+        </button>
+      </form>
+
+      <div class="text-center text-[11px] text-slate-500 pt-1">
+        Authorized Farm Personnel Only • Contact Admin if PIN is forgotten
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
+          <i data-lucide="sprout" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="text-base font-bold tracking-tight text-white">SHIITAKE FARM OS</h1>
+            <span id="roleBadge" class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Not Logged In</span>
+            <span id="syncStatusBadge" onclick="syncFromGoogleSheet(true)" class="cursor-pointer text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1" title="Click to sync now">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Local / Offline Mode
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">2 Incubation Rooms • 2 Polyhouses • Fresh (₹800/kg) • Whole Dried (₹2,500/kg) • Powder (₹3,000/kg)</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <select id="facilityFilter" onchange="renderAll()" class="bg-slate-950 border border-slate-700 text-xs rounded-lg px-3 py-2 text-slate-200 font-medium focus:outline-none focus:border-emerald-500">
+          <option value="ALL">All Facilities (4 Rooms)</option>
+          <option value="Incubation Room 1">Incubation Room 1</option>
+          <option value="Incubation Room 2">Incubation Room 2</option>
+          <option value="Polyhouse 1">Polyhouse 1 (Growing)</option>
+          <option value="Polyhouse 2">Polyhouse 2 (Growing)</option>
+        </select>
+
+        <button onclick="syncFromGoogleSheet(true)" class="text-xs bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-300 px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sync Sheet
+        </button>
+
+        <button onclick="logoutUser()" class="text-xs bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Switch User
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="bg-slate-900/60 border-b border-slate-800 px-4 overflow-x-auto">
+    <div class="max-w-7xl mx-auto flex space-x-1 py-1.5" id="navTabs">
+      <button onclick="switchTab('climate')" data-tab="climate" class="tab-btn px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-white">
+        <i data-lucide="thermometer-sun" class="w-4 h-4"></i> Log Weather & Foggers
+      </button>
+      <button onclick="switchTab('harvest')" data-tab="harvest" class="tab-btn px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-white">
+        <i data-lucide="scale" class="w-4 h-4"></i> Log Harvest & Sales
+      </button>
+      <button onclick="switchTab('polybatches')" data-tab="polybatches" class="tab-btn px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-white">
+        <i data-lucide="warehouse" class="w-4 h-4"></i> Polyhouse Batch & Flush Tracker
+      </button>
+      <button onclick="switchTab('batches')" data-tab="batches" class="tab-btn px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-white">
+        <i data-lucide="layers" class="w-4 h-4"></i> Incubation & Dispositions
+      </button>
+      <button onclick="switchTab('diagnosis')" data-tab="diagnosis" class="tab-btn px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-white">
+        <i data-lucide="shield-alert" class="w-4 h-4"></i> Block Diagnosis & 10% Lime SOP
+      </button>
+
+      <!-- Admin-Only Tabs -->
+      <button onclick="switchTab('dashboard')" data-tab="dashboard" class="tab-btn admin-only-tab px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Admin Analytics & BE%
+      </button>
+      <button onclick="switchTab('substrate')" data-tab="substrate" class="tab-btn admin-only-tab px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-white">
+        <i data-lucide="flask-conical" class="w-4 h-4"></i> Poplar Substrate Mixer
+      </button>
+      <button onclick="switchTab('cloud')" data-tab="cloud" class="tab-btn admin-only-tab px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-white">
+        <i data-lucide="cloud-cog" class="w-4 h-4"></i> Admin Cloud & PIN Setup
+      </button>
+    </div>
+  </nav>
+
+  <!-- WORKER MODE NOTICE BANNER -->
+  <div id="workerNoticeBanner" class="hidden bg-sky-500/10 border-b border-sky-500/30 px-4 py-2 text-xs text-sky-200">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <span><strong>Cultivator Data Entry Mode:</strong> Record weather/foggers, log fresh harvests & product sales/drying, log soak/spray flush inductions, and update block dispositions.</span>
+      <span id="activeWorkerTag" class="font-mono font-bold text-sky-300"></span>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT AREA -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 space-y-6">
+
+    <!-- KPI BAR -->
+    <section id="adminKpiBar" class="grid grid-cols-2 md:grid-cols-6 gap-3">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+        <div class="text-[11px] text-slate-400 uppercase font-semibold">Active Incubation</div>
+        <div id="kpiTotalBlocks" class="text-2xl font-mono font-bold text-white mt-1">0</div>
+        <div class="text-[11px] text-emerald-400 font-mono mt-0.5">True Ready/Run Blocks</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+        <div class="text-[11px] text-slate-400 uppercase font-semibold">Polyhouse Active</div>
+        <div id="kpiFruiting" class="text-2xl font-mono font-bold text-sky-400 mt-1">0</div>
+        <div class="text-[11px] text-slate-400 mt-0.5">Polyhouse 1 & 2</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+        <div class="text-[11px] text-slate-400 uppercase font-semibold">Fresh Stock In Hand</div>
+        <div id="kpiFreshInHand" class="text-2xl font-mono font-bold text-emerald-400 mt-1">0.0 kg</div>
+        <div id="kpiTotalYieldSub" class="text-[11px] text-slate-400 mt-0.5">Total Picked: 0.0 kg</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+        <div class="text-[11px] text-slate-400 uppercase font-semibold">Whole Dried Stock</div>
+        <div id="kpiDriedStock" class="text-2xl font-mono font-bold text-amber-400 mt-1">0.0 kg</div>
+        <div class="text-[11px] text-slate-400 mt-0.5">Rate: ₹2,500 / kg</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+        <div class="text-[11px] text-slate-400 uppercase font-semibold">Shiitake Powder Stock</div>
+        <div id="kpiPowderStock" class="text-2xl font-mono font-bold text-purple-400 mt-1">0.0 kg</div>
+        <div class="text-[11px] text-slate-400 mt-0.5">Rate: ₹3,000 / kg</div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 admin-only-block">
+        <div class="text-[11px] text-slate-400 uppercase font-semibold">Total Audit Revenue</div>
+        <div id="kpiTotalRevenue" class="text-2xl font-mono font-bold text-emerald-300 mt-1">₹0</div>
+        <div id="kpiRtfRevSub" class="text-[11px] text-slate-400 mt-0.5">Incl. RTF @ ₹200/blk</div>
+      </div>
+    </section>
+
+    <!-- TAB 1: ADMIN ANALYTICS DASHBOARD (ADMIN ONLY) -->
+    <div id="tab-dashboard" class="tab-pane space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="roomCardsContainer"></div>
+
+      <!-- Product Sales & Revenue Breakdown Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="indian-rupee" class="w-4 h-4 text-emerald-400"></i> Product-Wise Sales & Inventory Audit Summary
+          </h2>
+          <span class="text-xs text-slate-400 font-mono">Fresh ₹800/kg • Whole Dried ₹2,500/kg • Powder ₹3,000/kg • RTF Block ₹200</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs" id="auditSummaryCards"></div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-400"></i> Polyhouse Batch Cumulative Yield & Biological Efficiency (BE%)
+            </h2>
+            <span class="text-xs text-slate-400 font-mono">1.00 kg Dry Mass / Block</span>
+          </div>
+          <div class="h-64">
+            <canvas id="yieldChart"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="check-square" class="w-4 h-4 text-emerald-400"></i> Daily Grower SOP Checklist
+              </h2>
+              <button onclick="resetChecklist()" class="text-[11px] text-slate-400 hover:text-white underline">Reset Shift</button>
+            </div>
+            <div id="checklistContainer" class="space-y-2 text-xs"></div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+            <strong class="text-emerald-300">Flush 2 Trigger Rule:</strong> After resting 14–21 days, spray water 5–6 times/day continuously for 4–5 days. Weigh block before 12–24 hr soak if pins do not appear.
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <i data-lucide="users" class="w-4 h-4 text-sky-400"></i> Cultivator Logging Activity Summary (Backend Audit)
+        </h3>
+        <div id="workerAuditSummary" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2.5 text-xs"></div>
+      </div>
+    </div>
+
+    <!-- TAB 2: LOG HARVEST & SALES CONSOLE (REVAMPED TWO-STAGE WORKFLOW) -->
+    <div id="tab-harvest" class="tab-pane hidden space-y-6">
+      
+      <!-- STEP 1: RECORD FRESH HARVEST FROM POLYHOUSE BATCHES -->
+      <div class="bg-slate-900 border border-emerald-500/30 rounded-xl p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Step 1: Polyhouse Picking</span>
+            <h2 class="text-sm font-bold text-white mt-1">Record Fresh Harvest (Cumulative Grade A + Grade B + Culled)</h2>
+            <p class="text-xs text-slate-400">Log fresh mushrooms picked from active Polyhouse batches. Automatically adds to your Fresh Stock In Hand (stored up to 2–3 days before sale or drying).</p>
+          </div>
+          <button onclick="exportHarvestCSV()" class="admin-only-block text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg text-emerald-300 font-medium">
+            Export Fresh Harvest CSV
+          </button>
+        </div>
+
+        <form onsubmit="addHarvestLog(event)" class="grid grid-cols-2 md:grid-cols-7 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1">Harvest Date</label>
+            <input id="hDate" type="date" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Polyhouse Batch</label>
+            <select id="hBatch" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono"></select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Flush Number</label>
+            <select id="hFlush" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+              <option value="Flush 1">Flush 1</option>
+              <option value="Flush 2">Flush 2</option>
+              <option value="Flush 3">Flush 3</option>
+              <option value="Flush 4">Flush 4</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Grade A (kg)</label>
+            <input id="hGradeA" type="number" step="0.05" min="0" value="0" oninput="updateLiveFreshTotal()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Grade B (kg)</label>
+            <input id="hGradeB" type="number" step="0.05" min="0" value="0" oninput="updateLiveFreshTotal()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Culled (kg)</label>
+            <input id="hCull" type="number" step="0.05" min="0" value="0" oninput="updateLiveFreshTotal()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+          </div>
+          <div class="flex flex-col justify-between">
+            <div class="text-[11px] text-slate-400">Cumulative Fresh: <strong id="liveFreshTotalPreview" class="text-emerald-400 font-mono text-sm">0.00 kg</strong></div>
+            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 px-3 rounded-lg mt-1">
+              + Add Fresh Harvest
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- STEP 2: POST-HARVEST PROCESSING & SALES AUDIT CONSOLE -->
+      <div class="bg-slate-900 border border-sky-500/30 rounded-xl p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-sky-500/20 text-sky-300">Step 2: Inventory Processing & Sales Audit</span>
+            <h2 class="text-sm font-bold text-white mt-1">Record Product Sales (Fresh / Whole Dried / Powder) & Drying / Powder Conversion</h2>
+            <p class="text-xs text-slate-400">Default Audit Rates: <strong>Fresh = ₹800/kg</strong> • <strong>Whole Dried = ₹2,500/kg</strong> • <strong>Shiitake Powder = ₹3,000/kg</strong></p>
+          </div>
+          <button onclick="exportSalesCSV()" class="admin-only-block text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg text-sky-300 font-medium">
+            Export Sales & Processing CSV
+          </button>
+        </div>
+
+        <form onsubmit="addSalesOrProcessingTx(event)" class="grid grid-cols-2 md:grid-cols-7 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1">Transaction Date</label>
+            <input id="txDate" type="date" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-slate-400 mb-1">Action / Product Type</label>
+            <select id="txActionType" onchange="onTxTypeChange()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-medium">
+              <option value="SALE_FRESH">1. Sell Fresh Shiitake (@ ₹800/kg)</option>
+              <option value="PROCESS_DRY">2. Process Fresh → Whole Dried (Dehydrate)</option>
+              <option value="SALE_DRIED">3. Sell Whole Dried Shiitake (@ ₹2,500/kg)</option>
+              <option value="PROCESS_POWDER">4. Grind Whole Dried → Shiitake Powder</option>
+              <option value="SALE_POWDER">5. Sell Shiitake Powder (@ ₹3,000/kg)</option>
+            </select>
+          </div>
+          <div>
+            <label id="txQtyLabel" class="block text-slate-400 mb-1">Fresh Qty Sold (kg)</label>
+            <input id="txQtyKg" type="number" step="0.05" min="0.05" value="1.0" oninput="recalcTxPreview()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+          </div>
+          <div id="txOutputDiv" class="hidden">
+            <label id="txOutputLabel" class="block text-amber-300 mb-1">Dried Output Obtained (kg)</label>
+            <input id="txOutputKg" type="number" step="0.05" min="0" value="0.12" class="w-full bg-slate-950 border border-amber-500/50 rounded-lg px-2.5 py-2 text-amber-300 font-mono" />
+          </div>
+          <div id="txRateDiv">
+            <label class="block text-slate-400 mb-1">Sale Rate (₹/kg)</label>
+            <input id="txRate" type="number" step="1" min="0" value="800" oninput="recalcTxPreview()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-emerald-300 font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Buyer / Batch Notes</label>
+            <input id="txNotes" placeholder="e.g. Local market / Customer" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white" />
+          </div>
+          <div class="flex flex-col justify-between">
+            <div id="txRevPreviewBox" class="text-[11px] text-slate-400">Audit Value: <strong id="txRevPreview" class="text-emerald-400 font-mono text-sm">₹800</strong></div>
+            <button type="submit" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-3 rounded-lg mt-1">
+              + Record Entry
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- TWO SIDE-BY-SIDE / STACKED AUDIT LEDGERS -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Ledger A: Fresh Harvests Picked -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-white">Fresh Harvest Picking Ledger (By Date & Batch)</h3>
+            <span id="ledgerFreshSumTag" class="text-xs font-mono text-emerald-400">Total: 0.0 kg</span>
+          </div>
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase text-[11px]">
+                <th class="py-2 px-2">Date</th>
+                <th class="py-2 px-2">Batch</th>
+                <th class="py-2 px-2">Flush</th>
+                <th class="py-2 px-2">A / B / Cull</th>
+                <th class="py-2 px-2 text-emerald-400">Total Fresh</th>
+                <th class="py-2 px-2">By</th>
+                <th class="py-2 px-2 admin-only-col">Del</th>
+              </tr>
+            </thead>
+            <tbody id="harvestTableBody" class="divide-y divide-slate-800/70"></tbody>
+          </table>
+        </div>
+
+        <!-- Ledger B: Product Sales & Processing Audit Ledger -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-white">Sales & Drying / Powder Processing Audit Ledger</h3>
+            <span id="ledgerSalesSumTag" class="text-xs font-mono text-sky-400">Sales: ₹0</span>
+          </div>
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase text-[11px]">
+                <th class="py-2 px-2">Date</th>
+                <th class="py-2 px-2">Activity / Product</th>
+                <th class="py-2 px-2">Qty / Output</th>
+                <th class="py-2 px-2">Rate</th>
+                <th class="py-2 px-2 text-emerald-400">Revenue (₹)</th>
+                <th class="py-2 px-2">Notes / By</th>
+                <th class="py-2 px-2 admin-only-col">Del</th>
+              </tr>
+            </thead>
+            <tbody id="salesLedgerTableBody" class="divide-y divide-slate-800/70"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: POLYHOUSE BATCH & MULTI-FLUSH TRACKER (INSPIRED BY SHIITAKE CULTIVATOR APP) -->
+    <div id="tab-polybatches" class="tab-pane hidden space-y-6">
+      
+      <!-- Section A: Open RTF Blocks into Polyhouse -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <i data-lucide="warehouse" class="w-4 h-4 text-sky-400"></i> 1. Open RTF Incubation Blocks into Polyhouse (Create Polyhouse Batch)
+        </h2>
+        <form onsubmit="addPolyBatch(event)" class="grid grid-cols-1 md:grid-cols-6 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1">New Polyhouse Batch Code</label>
+            <input id="pbCode" required placeholder="e.g. PH-POP-01" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Source Incubation Batch</label>
+            <select id="pbSourceBatch" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono"></select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Growing Room</label>
+            <select id="pbRoom" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+              <option value="Polyhouse 1">Polyhouse 1</option>
+              <option value="Polyhouse 2">Polyhouse 2</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Blocks Opened</label>
+            <input id="pbBlocks" type="number" min="1" value="100" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Opening / Transfer Date</label>
+            <input id="pbDate" type="date" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+          </div>
+          <div class="flex items-end">
+            <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-slate-950 font-bold py-2 px-3 rounded-lg">
+              + Open in Polyhouse
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Section B: Soak / Spray Date Recorder (Flush Induction Log from Shiitake Cultivator App) -->
+      <div class="bg-slate-900 border border-amber-500/30 rounded-xl p-4 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="droplets" class="w-4 h-4 text-amber-400"></i> 2. Flush Induction Recorder (Soak / 5–6x Spray Start Date)
+            </h2>
+            <p class="text-xs text-slate-400">Record when a Polyhouse batch is initiated for Flush 1, 2, 3, or 4. Automatically calculates Est. Pinning (+5d) and Est. Harvest (+11d).</p>
+          </div>
+        </div>
+        <form onsubmit="addSoakLog(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1">Polyhouse Batch</label>
+            <select id="sBatch" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono"></select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Target Flush</label>
+            <select id="sFlush" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+              <option value="Flush 1">Flush 1 (Primary Opening)</option>
+              <option value="Flush 2">Flush 2 (Post 14-21d Rest)</option>
+              <option value="Flush 3">Flush 3</option>
+              <option value="Flush 4">Flush 4</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Soak / Spray Start Date</label>
+            <input id="sDate" type="date" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Induction Method / Notes</label>
+            <input id="sNotes" placeholder="e.g. 5-6x spray 4d or 18h cold soak" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white" />
+          </div>
+          <div class="flex items-end">
+            <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 px-3 rounded-lg">
+              + Record Soak / Spray Date
+            </button>
+          </div>
+        </form>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase text-[11px]">
+                <th class="py-2 px-2">Polyhouse Batch</th>
+                <th class="py-2 px-2">Target Flush</th>
+                <th class="py-2 px-2">Induction Start</th>
+                <th class="py-2 px-2 text-sky-300">Est. Pinning (+5d)</th>
+                <th class="py-2 px-2 text-emerald-300">Est. Harvest (+11d)</th>
+                <th class="py-2 px-2">Method / Notes</th>
+                <th class="py-2 px-2">Status / Action</th>
+              </tr>
+            </thead>
+            <tbody id="soakLogTableBody" class="divide-y divide-slate-800/70"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section C: Multi-Flush Cumulative Yield Breakdown per Polyhouse Batch (3+ Months Lifecycle) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-white">3. Cumulative Multi-Flush Yield Tracker (Per Polyhouse Batch Over 3+ Months)</h3>
+            <p class="text-xs text-slate-400">Automatically sums Flush 1, Flush 2, Flush 3, and Flush 4+ harvests for every Polyhouse batch with live Biological Efficiency (BE%).</p>
+          </div>
+        </div>
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 uppercase text-[11px]">
+              <th class="py-2 px-2">Polyhouse Batch</th>
+              <th class="py-2 px-2">Room & Opened Date</th>
+              <th class="py-2 px-2">Active Days</th>
+              <th class="py-2 px-2">Blocks (Dry kg)</th>
+              <th class="py-2 px-2 text-sky-300">Flush 1</th>
+              <th class="py-2 px-2 text-amber-300">Flush 2</th>
+              <th class="py-2 px-2 text-purple-300">Flush 3</th>
+              <th class="py-2 px-2 text-pink-300">Flush 4</th>
+              <th class="py-2 px-2 text-emerald-400">Cumulative Yield</th>
+              <th class="py-2 px-2 text-emerald-300">Total B.E.%</th>
+              <th class="py-2 px-2 admin-only-col">Action</th>
+            </tr>
+          </thead>
+          <tbody id="polyBatchTableBody" class="divide-y divide-slate-800/70"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: INCUBATION & DISPOSITIONS -->
+    <div id="tab-batches" class="tab-pane hidden space-y-6">
+      <div id="adminBatchCreateBox" class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i> Inoculate / Register New Incubation Batch (Admin Only)
+        </h2>
+        <form onsubmit="addBatch(event)" class="grid grid-cols-1 md:grid-cols-6 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1">Batch Code</label>
+            <input id="bCode" required placeholder="e.g. POP-26-05" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Strain</label>
+            <input id="bStrain" value="DMRO-356 (Poplar)" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Incubation Room</label>
+            <select id="bRoom" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white">
+              <option value="Incubation Room 1">Incubation Room 1</option>
+              <option value="Incubation Room 2">Incubation Room 2</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Initial Inoculated Blocks</label>
+            <input id="bCount" type="number" min="1" value="504" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Inoculation Date</label>
+            <input id="bDate" type="date" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+          </div>
+          <div class="flex items-end">
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 px-3 rounded-lg">
+              + Create Batch
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-white">Incubation Batches & Dispositions (Discarded / Sold RTF / Transferred)</h3>
+            <span class="text-[11px] text-slate-400">True Active Incubation = Initial − (Discarded + Sold RTF + Transferred)</span>
+          </div>
+          <button onclick="recalculateTransferredFromPolyBatches()" class="text-xs bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 font-semibold px-3 py-1.5 rounded-lg">
+            Recalculate Transferred from Polyhouse Batches
+          </button>
+        </div>
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 uppercase text-[11px]">
+              <th class="py-2 px-2">Batch / Room</th>
+              <th class="py-2 px-2">Age (Days)</th>
+              <th class="py-2 px-2">Initial</th>
+              <th class="py-2 px-2 text-rose-400">Failed / Discarded</th>
+              <th class="py-2 px-2 text-amber-300">Sold RTF (@₹200)</th>
+              <th class="py-2 px-2 text-sky-300">Transferred to Polyhouse</th>
+              <th class="py-2 px-2 text-emerald-400">True Active Incubation</th>
+              <th class="py-2 px-2">Stage / By</th>
+              <th class="py-2 px-2 admin-only-col">Action</th>
+            </tr>
+          </thead>
+          <tbody id="batchTableBody" class="divide-y divide-slate-800/70"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 5: MANUAL CLIMATE & FOGGER LOGGER -->
+    <div id="tab-climate" class="tab-pane hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-white">Manual Thermometer / Hygrometer & Fogger Log (Incubation & Polyhouses)</h2>
+            <p class="text-xs text-slate-400">Every entry is automatically stamped with your Cultivator / Operator ID and synced to Google Sheets</p>
+          </div>
+          <button onclick="exportClimateCSV()" class="admin-only-block text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg text-emerald-300 font-medium">
+            Export Weather CSV
+          </button>
+        </div>
+        <form onsubmit="addClimateLog(event)" class="grid grid-cols-2 md:grid-cols-7 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1">Room / Polyhouse</label>
+            <select id="cRoom" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+              <option value="Incubation Room 1">Incubation Room 1</option>
+              <option value="Incubation Room 2">Incubation Room 2</option>
+              <option value="Polyhouse 1">Polyhouse 1</option>
+              <option value="Polyhouse 2">Polyhouse 2</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Shift Check</label>
+            <select id="cShift" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+              <option value="Morning (08:00)">Morning (08:00)</option>
+              <option value="Midday (13:00)">Midday (13:00)</option>
+              <option value="Evening (18:00)">Evening (18:00)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Temp (°C)</label>
+            <input id="cTemp" type="number" step="0.1" value="18.5" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Humidity (RH%)</label>
+            <input id="cRH" type="number" step="1" value="88" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Manual Fogger</label>
+            <select id="cFogger" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+              <option value="OFF">OFF</option>
+              <option value="ON - 10 mins">ON - 10 mins</option>
+              <option value="ON - 20 mins">ON - 20 mins</option>
+              <option value="ON - 30 mins">ON - 30 mins</option>
+              <option value="5-6x Spray Round">5-6x Spray Round (Flush 2)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Exhaust Fan / Vents</label>
+            <select id="cVent" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+              <option value="Natural Vents 50%">Natural Vents 50%</option>
+              <option value="Exhaust ON 15m + Vents">Exhaust ON 15m + Vents</option>
+              <option value="Exhaust ON 30m">Exhaust ON 30m</option>
+              <option value="Closed (Retain RH)">Closed (Retain RH)</option>
+            </select>
+          </div>
+          <div class="flex items-end col-span-2 md:col-span-1">
+            <button type="submit" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-3 rounded-lg">
+              Log Reading
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+        <h3 class="text-sm font-bold text-white mb-3">Cumulative Weather & Actuator History (All Workers)</h3>
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 uppercase text-[11px]">
+              <th class="py-2 px-2">Timestamp / Shift</th>
+              <th class="py-2 px-2">Room</th>
+              <th class="py-2 px-2">Temp (°C)</th>
+              <th class="py-2 px-2">Humidity (%)</th>
+              <th class="py-2 px-2">Fogger Action</th>
+              <th class="py-2 px-2">Exhaust / Vents</th>
+              <th class="py-2 px-2">Logged By</th>
+              <th class="py-2 px-2">Advisory</th>
+              <th class="py-2 px-2 admin-only-col">Action</th>
+            </tr>
+          </thead>
+          <tbody id="climateTableBody" class="divide-y divide-slate-800/70"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 6: BLOCK DIAGNOSIS & CUSTOM PROTOCOLS -->
+    <div id="tab-diagnosis" class="tab-pane hidden space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-slate-900 border-2 border-emerald-500/40 rounded-xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold uppercase">Updated Block Diagnosis SOP</span>
+            <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Green Mold (Trichoderma) — 10% Lime Solution Protocol</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            When green mold patches appear during late incubation, browning, or between flushes on poplar sawdust/chip blocks, <strong>do not use Hydrogen Peroxide</strong>. Follow the farm's alkaline suppression treatment:
+          </p>
+          <ul class="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+            <li><strong>Preparation:</strong> Mix Hydrated Lime in clean water at a <strong>10% rate (100g Lime per 1 Liter of water)</strong>.</li>
+            <li><strong>Application:</strong> Gently wipe surface spores with a cloth dipped in lime water, then apply or spray the <strong>10% lime solution in water</strong> directly onto the affected spot.</li>
+            <li><strong>Action Mechanism:</strong> Raises surface pH above 9.5, halting <em>Trichoderma</em> growth while preserving browned Shiitake mycelium.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-900 border-2 border-sky-500/40 rounded-xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-300 font-mono text-xs font-bold uppercase">Flush 2 Triggering SOP</span>
+            <i data-lucide="droplets" class="w-5 h-5 text-sky-400"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Flush 2 Water Spray & Block Weighing Procedure</h3>
+          <ol class="text-xs text-slate-300 space-y-1.5 list-decimal pl-4">
+            <li><strong>Resting Period (14–21 Days):</strong> Rest blocks on racks after Flush 1 harvest.</li>
+            <li><strong>Primary Spray Trigger (4–5 Days):</strong> After resting 14–21 days, start <strong>spraying water 5 to 6 times a day continuously for 4 to 5 days</strong> until Flush 2 pins appear.</li>
+            <li><strong>Fallback Weigh & Re-Soak Check:</strong> If Flush 2 does not appear after the 4–5 day spray cycle, <strong>weigh the block before re-soaking for 12 to 24 hours</strong> in cold water to trigger Flush 2.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: POPLAR SUBSTRATE MIXER (ADMIN ONLY) -->
+    <div id="tab-substrate" class="tab-pane hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h2 class="text-sm font-bold text-white mb-1">Poplar Wood Sawdust & Chip Batch Calculator (50:50 Wood + 25% Combined Bran @ 60% Moisture)</h2>
+        <p class="text-xs text-slate-400 mb-4">Calculate exact dry material and water weights for any target number of 2.50 kg wet blocks.</p>
+        <div class="flex flex-wrap items-end gap-4 mb-6">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Target Number of 2.50 kg Blocks</label>
+            <input id="calcBlocks" type="number" min="10" value="200" oninput="runSubstrateCalc()" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm w-44" />
+          </div>
+          <div class="text-xs text-slate-400">
+            Each Block = <span class="text-white font-mono font-bold">1.00 kg Dry Mix</span> + <span class="text-sky-400 font-mono font-bold">1.50 L Water</span> = <span class="text-emerald-400 font-mono font-bold">2.50 kg Wet</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3" id="substrateCalcOutput"></div>
+      </div>
+    </div>
+
+    <!-- TAB 8: ADMIN CLOUD SYNC & WORKER PIN MANAGEMENT (ADMIN ONLY) -->
+    <div id="tab-cloud" class="tab-pane hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i> Google Sheets Central Repository Setup
+            </h2>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300">Automatic 2-Way Sync</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Google Apps Script Web App URL connected to your Master Google Sheet.
+          </p>
+          <div class="space-y-2 text-xs">
+            <label class="block text-slate-400 font-semibold">Google Apps Script Web App URL</label>
+            <input id="gasUrlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs" />
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="saveGasUrl()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-lg">
+              Save & Test Cloud Connection
+            </button>
+            <button onclick="pushAllStateToCloud()" class="bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 font-semibold text-xs px-4 py-2 rounded-lg">
+              Push All Local Data to Sheet
+            </button>
+            <button onclick="exportBackupJSON()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs px-3 py-2 rounded-lg">
+              Download JSON Backup
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="key-round" class="w-4 h-4 text-amber-400"></i> Operator & Cultivator PIN Management
+          </h2>
+          <div id="pinManagerList" class="space-y-2 text-xs"></div>
+          <button onclick="saveUpdatedPins()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-lg">
+            Save Updated PINs
+          </button>
+        </div>
+      </div>
+    </div>
+
+  
+  <!-- EDIT INCUBATION BATCH MODAL (ADMIN ONLY) -->
+  <div id="editBatchModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-4 h-4 text-sky-400"></i> Edit Incubation Batch Details
+        </h3>
+        <button onclick="closeEditBatchModal()" class="text-slate-400 hover:text-white text-xs">✕ Close</button>
+      </div>
+      <form onsubmit="saveEditedBatch(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        <input type="hidden" id="ebId" />
+        <div>
+          <label class="block text-slate-400 mb-1">Batch Code</label>
+          <input id="ebCode" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Strain</label>
+          <input id="ebStrain" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Incubation Room</label>
+          <select id="ebRoom" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white">
+            <option value="Incubation Room 1">Incubation Room 1</option>
+            <option value="Incubation Room 2">Incubation Room 2</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Inoculation Date</label>
+          <input id="ebDate" type="date" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Initial Inoculated Blocks</label>
+          <input id="ebInitial" type="number" min="0" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+        </div>
+        <div>
+          <label class="block text-rose-300 mb-1">Failed / Discarded Blocks</label>
+          <input id="ebDiscarded" type="number" min="0" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-rose-300 font-mono" />
+        </div>
+        <div>
+          <label class="block text-amber-300 mb-1">Sold RTF (@ ₹200)</label>
+          <input id="ebSoldRtf" type="number" min="0" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-mono" />
+        </div>
+        <div>
+          <label class="block text-sky-300 mb-1">Transferred to Polyhouse</label>
+          <input id="ebTransferred" type="number" min="0" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sky-300 font-mono" />
+        </div>
+        <div class="sm:col-span-2 flex justify-end gap-2 pt-2 border-t border-slate-800">
+          <button type="button" onclick="closeEditBatchModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold">Save Changes & Sync</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  </main>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    const DEFAULT_USERS = [
+      { id: 'ADMIN', name: 'Admin (Sapan Thakur)', role: 'ADMIN', pin: '9999' },
+      { id: 'C1', name: 'Cultivator 1 : A', role: 'WORKER', pin: '1001' },
+      { id: 'C2', name: 'Cultivator 2 : K', role: 'WORKER', pin: '1002' },
+      { id: 'C3', name: 'Cultivator 3 : P', role: 'WORKER', pin: '1003' },
+      { id: 'C4', name: 'Cultivator 4 : K', role: 'WORKER', pin: '1004' },
+      { id: 'C5', name: 'Cultivator 5 : S', role: 'WORKER', pin: '1005' },
+      { id: 'C6', name: 'Cultivator 6 : T', role: 'WORKER', pin: '1006' },
+      { id: 'C7', name: 'Cultivator 7 : X', role: 'WORKER', pin: '1007' }
+    ];
+
+    const STAGES = [
+      '1. Spawn Run (Incubation)',
+      '2. Popcorning / Blistering',
+      '3. Browning Coat (120-150d)',
+      '4. Ready ~2.0kg / Transfer',
+      '5. Flush 1 Fruiting',
+      '6. Dry Rest (14-21 Days)',
+      '7. Flush 2 Trigger (5-6x Spray / Soak)'
+    ];
+
+    const DEFAULT_STATE = {
+      gasUrl: 'https://script.google.com/macros/s/AKfycbwIwpsJ3DoIT2M45BxHoG7QtqEDH8ankWot18h7LOmsE_8JXedVPOH1BEGF16lhHc2Zzw/exec',
+      users: DEFAULT_USERS,
+      batches: [
+        { id: 'B1', code: 'POP-26-01', strain: 'DMRO-356 (Poplar)', room: 'Incubation Room 1', initialBlocks: 504, discardedBlocks: 54, soldRtfBlocks: 50, transferredBlocks: 400, date: '2026-05-01', sampleWt: 2.02, stage: '3. Browning Coat (120-150d)', by: 'Admin (Sapan Thakur)' },
+        { id: 'B2', code: 'POP-26-02', strain: 'DMRO-356 (Poplar)', room: 'Incubation Room 2', initialBlocks: 400, discardedBlocks: 20, soldRtfBlocks: 30, transferredBlocks: 350, date: '2026-04-15', sampleWt: 1.95, stage: '4. Ready ~2.0kg / Transfer', by: 'Cultivator 2 : K' }
+      ],
+      polyBatches: [
+        { id: 'PB1', polyCode: 'PH-POP-01', incubationBatch: 'POP-26-01', room: 'Polyhouse 1', blocksTransferred: 400, transferDate: '2026-09-01', status: 'Active Fruiting', by: 'Admin' },
+        { id: 'PB2', polyCode: 'PH-POP-02', incubationBatch: 'POP-26-02', room: 'Polyhouse 2', blocksTransferred: 350, transferDate: '2026-08-20', status: 'Active Fruiting', by: 'Cultivator 2 : K' }
+      ],
+      soakLogs: [
+        { id: 'S1', polyCode: 'PH-POP-02', flush: 'Flush 2', soakDate: '2026-11-15', estPinDate: '2026-11-20', estHarvestDate: '2026-11-26', notes: '5-6x daily spray 4 days', status: 'Active Pinning', by: 'Cultivator 2 : K' }
+      ],
+      climateLogs: [
+        { id: 'C1', time: '2026-11-22 Morning (08:00)', room: 'Polyhouse 1', temp: 17.8, rh: 89, fogger: 'ON - 20 mins', vent: 'Exhaust ON 15m + Vents', by: 'Cultivator 1 : A' },
+        { id: 'C2', time: '2026-11-22 Morning (08:00)', room: 'Polyhouse 2', temp: 18.4, rh: 91, fogger: '5-6x Spray Round', vent: 'Natural Vents 50%', by: 'Cultivator 2 : K' }
+      ],
+      harvests: [
+        { id: 'H1', date: '2026-11-19', batch: 'PH-POP-01', flush: 'Flush 1', gradeA: 12.0, gradeB: 4.0, cull: 0.5, notes: 'Morning pick', by: 'Cultivator 1 : A' },
+        { id: 'H2', date: '2026-11-21', batch: 'PH-POP-01', flush: 'Flush 1', gradeA: 8.5, gradeB: 2.0, cull: 0.0, notes: 'Second pick', by: 'Cultivator 3 : P' },
+        { id: 'H3', date: '2026-11-21', batch: 'PH-POP-02', flush: 'Flush 2', gradeA: 10.0, gradeB: 3.0, cull: 0.5, notes: 'Flush 2 harvest', by: 'Cultivator 4 : K' }
+      ],
+      salesLedger: [
+        { id: 'TX1', date: '2026-11-20', actionType: 'SALE_FRESH', product: 'Fresh Shiitake', qtyKg: 15.0, outputKg: 0, rate: 800, revenue: 12000, notes: 'Local hotel order', by: 'Admin (Sapan Thakur)' },
+        { id: 'TX2', date: '2026-11-21', actionType: 'PROCESS_DRY', product: 'Whole Dried Shiitake', qtyKg: 10.0, outputKg: 1.25, rate: 0, revenue: 0, notes: 'Dehydrated unsold 2d fresh stock', by: 'Cultivator 3 : P' },
+        { id: 'TX3', date: '2026-11-22', actionType: 'SALE_DRIED', product: 'Whole Dried Shiitake', qtyKg: 1.0, outputKg: 0, rate: 2500, revenue: 2500, notes: 'Retail buyer', by: 'Admin (Sapan Thakur)' }
+      ],
+      checklist: [
+        { id: 'T1', text: 'Record morning manual thermometer & hygrometer readings in Polyhouse 1 & 2', done: true },
+        { id: 'T2', text: 'Execute 5–6x daily water spray cycle on rested Flush 2 blocks (4–5 days continuous)', done: false },
+        { id: 'T3', text: 'Check stored fresh harvest (max 2–3 days); move unsold fresh mushrooms to dryer', done: false },
+        { id: 'T4', text: 'Inspect browned blocks for green mold; spot-treat with 10% Lime solution in water', done: false },
+        { id: 'T5', text: 'Check Incubation Room 1 & 2 batches approaching 120–150 days (~2.0 kg target weight)', done: false }
+      ]
+    };
+
+    let state = JSON.parse(localStorage.getItem('shiitake_poplar_os_v6')) || DEFAULT_STATE;
+    if (!state.gasUrl) state.gasUrl = 'https://script.google.com/macros/s/AKfycbwIwpsJ3DoIT2M45BxHoG7QtqEDH8ankWot18h7LOmsE_8JXedVPOH1BEGF16lhHc2Zzw/exec';
+    if (!state.users) state.users = DEFAULT_USERS;
+    if (!state.polyBatches) state.polyBatches = DEFAULT_STATE.polyBatches;
+    if (!state.soakLogs) state.soakLogs = [];
+    if (!state.salesLedger) state.salesLedger = [];
+    let currentUser = null;
+    let yieldChartInstance = null;
+
+    function saveState() {
+      localStorage.setItem('shiitake_poplar_os_v6', JSON.stringify(state));
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const uid = document.getElementById('loginUserSelect').value;
+      const pin = document.getElementById('loginPinInput').value.trim();
+      const userObj = state.users.find(u => u.id === uid);
+      const errEl = document.getElementById('loginErrorMsg');
+
+      if (!userObj || userObj.pin !== pin) {
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      errEl.classList.add('hidden');
+      currentUser = userObj;
+      document.getElementById('loginPinInput').value = '';
+      document.getElementById('loginModal').classList.add('hidden');
+      applyRolePermissions();
+      syncFromGoogleSheet(false);
+    }
+
+    function logoutUser() {
+      currentUser = null;
+      document.getElementById('loginModal').classList.remove('hidden');
+    }
+
+    function isAdmin() {
+      return currentUser && currentUser.role === 'ADMIN';
+    }
+
+    function applyRolePermissions() {
+      const badge = document.getElementById('roleBadge');
+      const banner = document.getElementById('workerNoticeBanner');
+      const workerTag = document.getElementById('activeWorkerTag');
+
+      if (isAdmin()) {
+        badge.textContent = `${currentUser.name} [FULL CONTROL]`;
+        badge.className = 'text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+        banner.classList.add('hidden');
+        document.querySelectorAll('.admin-only-tab').forEach(el => el.classList.remove('hidden'));
+        document.querySelectorAll('.admin-only-block').forEach(el => el.classList.remove('hidden'));
+        document.querySelectorAll('.admin-only-col').forEach(el => el.classList.remove('hidden'));
+        document.getElementById('adminBatchCreateBox').classList.remove('hidden');
+        switchTab('dashboard');
+      } else {
+        badge.textContent = `${currentUser.name} [DATA LOGGING]`;
+        badge.className = 'text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40';
+        banner.classList.remove('hidden');
+        workerTag.textContent = `Active ID: ${currentUser.name}`;
+        document.querySelectorAll('.admin-only-tab').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.admin-only-block').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.admin-only-col').forEach(el => el.classList.add('hidden'));
+        document.getElementById('adminBatchCreateBox').classList.add('hidden');
+        switchTab('harvest');
+      }
+      renderAll();
+    }
+
+    function switchTab(tabId) {
+      if (!isAdmin() && ['dashboard', 'substrate', 'cloud'].includes(tabId)) {
+        tabId = 'harvest';
+      }
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        if (btn.dataset.tab === tabId) {
+          btn.className = `tab-btn ${btn.classList.contains('admin-only-tab') ? 'admin-only-tab' : ''} px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30`;
+        } else {
+          btn.className = `tab-btn ${btn.classList.contains('admin-only-tab') ? 'admin-only-tab' : ''} px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-white`;
+        }
+      });
+      if (!isAdmin()) {
+        document.querySelectorAll('.admin-only-tab').forEach(el => el.classList.add('hidden'));
+      }
+    }
+
+    // GOOGLE SHEETS CLOUD SYNC
+    function updateSyncBadge(status, text) {
+      const el = document.getElementById('syncStatusBadge');
+      if (!el) return;
+      if (status === 'synced') {
+        el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ${text}`;
+        el.className = 'cursor-pointer text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 flex items-center gap-1';
+      } else if (status === 'syncing') {
+        el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></span> ${text}`;
+      } else {
+        el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> ${text}`;
+      }
+    }
+
+    async function syncFromGoogleSheet(showAlert) {
+      if (!state.gasUrl) {
+        updateSyncBadge('local', 'Local Mode (Set Sheet URL in Admin)');
+        return;
+      }
+      updateSyncBadge('syncing', 'Syncing Google Sheet...');
+      try {
+        const res = await fetch(state.gasUrl + '?t=' + Date.now());
+        const data = await res.json();
+        if (data && data.status === 'ok') {
+          if (data.batches && data.batches.length > 0) {
+            state.batches = data.batches.map(b => ({ ...b, date: formatDateForInput(b.date) }));
+          }
+          if (data.polyBatches && data.polyBatches.length > 0) {
+            state.polyBatches = data.polyBatches.map(pb => ({ ...pb, transferDate: formatDateForInput(pb.transferDate) }));
+          }
+          if (data.soakLogs && data.soakLogs.length > 0) state.soakLogs = data.soakLogs;
+          if (data.climateLogs && data.climateLogs.length > 0) state.climateLogs = data.climateLogs;
+          if (data.harvests && data.harvests.length > 0) state.harvests = data.harvests;
+          if (data.salesLedger && data.salesLedger.length > 0) state.salesLedger = data.salesLedger;
+          saveState();
+          renderAll();
+          updateSyncBadge('synced', 'Google Sheet Synced');
+          if (showAlert) alert('Successfully pulled latest cumulative data from Google Sheets!');
+        }
+      } catch (err) {
+        updateSyncBadge('local', 'Offline Cached (Will Sync)');
+        if (showAlert) alert('Could not reach Google Sheet right now. Data is saved locally on device.');
+      }
+    }
+
+    async function postToGoogleSheet(payload) {
+      if (!state.gasUrl) return;
+      updateSyncBadge('syncing', 'Uploading to Sheet...');
+      try {
+        await fetch(state.gasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        updateSyncBadge('synced', 'Saved to Google Sheet');
+      } catch (err) {
+        updateSyncBadge('local', 'Saved Locally (Offline)');
+      }
+    }
+
+    async function pushAllStateToCloud() {
+      if (!state.gasUrl) {
+        alert('Please enter and save your Google Apps Script Web App URL first.');
+        return;
+      }
+      await postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+      alert('All incubation batches, polyhouse batches, soak logs, harvests, and sales audit records pushed to your Google Sheet!');
+    }
+
+    function saveGasUrl() {
+      const url = document.getElementById('gasUrlInput').value.trim();
+      state.gasUrl = url;
+      saveState();
+      syncFromGoogleSheet(true);
+    }
+
+    function parseFlexibleDate(dateStr) {
+      if (!dateStr) return null;
+      const s = String(dateStr).trim();
+      // Handle YYYY-MM-DD or ISO string
+      const isoMatch = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+      if (isoMatch) {
+        return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+      }
+      // Handle DD-MM-YYYY or DD/MM/YYYY
+      const dmyMatch = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+      if (dmyMatch) {
+        return new Date(Number(dmyMatch[3]), Number(dmyMatch[2]) - 1, Number(dmyMatch[1]));
+      }
+      const parsed = new Date(s);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function formatDateForInput(dateStr) {
+      const d = parseFlexibleDate(dateStr);
+      if (!d) return new Date().toISOString().slice(0, 10);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function daysBetween(dateStr) {
+      const d = parseFlexibleDate(dateStr);
+      if (!d) return 0;
+      const now = new Date();
+      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const targetMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const diff = Math.floor((todayMidnight - targetMidnight) / (1000 * 60 * 60 * 24));
+      return Math.max(0, diff);
+    }
+
+    function addDaysToDate(dateStr, days) {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + days);
+      return d.toISOString().slice(0, 10);
+    }
+
+    // MULTI-FLUSH YIELD CALCULATORS PER POLYHOUSE BATCH
+    function getPolyBatchFlushYields(polyCode) {
+      const matching = state.harvests.filter(h => h.batch === polyCode);
+      let f1 = 0, f2 = 0, f3 = 0, f4 = 0;
+      matching.forEach(h => {
+        const tot = Number(h.gradeA || 0) + Number(h.gradeB || 0) + Number(h.cull || 0);
+        const fl = String(h.flush || '');
+        if (fl.includes('1')) f1 += tot;
+        else if (fl.includes('2')) f2 += tot;
+        else if (fl.includes('3')) f3 += tot;
+        else f4 += tot;
+      });
+      return { f1, f2, f3, f4, total: f1 + f2 + f3 + f4 };
+    }
+
+    // INVENTORY BALANCE ENGINE (FRESH -> DRIED -> POWDER + SALES)
+    function computeInventoryMetrics() {
+      let totalPickedFresh = 0;
+      state.harvests.forEach(h => {
+        totalPickedFresh += Number(h.gradeA || 0) + Number(h.gradeB || 0) + Number(h.cull || 0);
+      });
+
+      let freshSold = 0, freshSentToDryer = 0, freshRevenue = 0;
+      let driedProduced = 0, driedSold = 0, driedSentToPowder = 0, driedRevenue = 0;
+      let powderProduced = 0, powderSold = 0, powderRevenue = 0;
+
+      state.salesLedger.forEach(tx => {
+        const q = Number(tx.qtyKg || 0);
+        const out = Number(tx.outputKg || 0);
+        const rev = Number(tx.revenue || 0);
+        if (tx.actionType === 'SALE_FRESH') {
+          freshSold += q;
+          freshRevenue += rev;
+        } else if (tx.actionType === 'PROCESS_DRY') {
+          freshSentToDryer += q;
+          driedProduced += out;
+        } else if (tx.actionType === 'SALE_DRIED') {
+          driedSold += q;
+          driedRevenue += rev;
+        } else if (tx.actionType === 'PROCESS_POWDER') {
+          driedSentToPowder += q;
+          powderProduced += out;
+        } else if (tx.actionType === 'SALE_POWDER') {
+          powderSold += q;
+          powderRevenue += rev;
+        }
+      });
+
+      const freshInHand = Math.max(0, totalPickedFresh - (freshSold + freshSentToDryer));
+      const driedInHand = Math.max(0, driedProduced - (driedSold + driedSentToPowder));
+      const powderInHand = Math.max(0, powderProduced - powderSold);
+
+      return {
+        totalPickedFresh, freshSold, freshSentToDryer, freshInHand, freshRevenue,
+        driedProduced, driedSold, driedSentToPowder, driedInHand, driedRevenue,
+        powderProduced, powderSold, powderInHand, powderRevenue,
+        totalProductSalesRevenue: freshRevenue + driedRevenue + powderRevenue
+      };
+    }
+
+    function updateLiveFreshTotal() {
+      const a = Number(document.getElementById('hGradeA').value || 0);
+      const b = Number(document.getElementById('hGradeB').value || 0);
+      const c = Number(document.getElementById('hCull').value || 0);
+      document.getElementById('liveFreshTotalPreview').textContent = `${(a + b + c).toFixed(2)} kg`;
+    }
+
+    function onTxTypeChange() {
+      const type = document.getElementById('txActionType').value;
+      const qtyLabel = document.getElementById('txQtyLabel');
+      const outDiv = document.getElementById('txOutputDiv');
+      const outLabel = document.getElementById('txOutputLabel');
+      const rateDiv = document.getElementById('txRateDiv');
+      const rateInput = document.getElementById('txRate');
+      const revBox = document.getElementById('txRevPreviewBox');
+
+      if (type === 'SALE_FRESH') {
+        qtyLabel.textContent = 'Fresh Qty Sold (kg)';
+        outDiv.classList.add('hidden');
+        rateDiv.classList.remove('hidden');
+        revBox.classList.remove('hidden');
+        rateInput.value = 800;
+      } else if (type === 'PROCESS_DRY') {
+        qtyLabel.textContent = 'Fresh Input to Dryer (kg)';
+        outDiv.classList.remove('hidden');
+        outLabel.textContent = 'Whole Dried Output (kg)';
+        rateDiv.classList.add('hidden');
+        revBox.classList.add('hidden');
+        rateInput.value = 0;
+        const q = Number(document.getElementById('txQtyKg').value || 0);
+        document.getElementById('txOutputKg').value = (q * 0.12).toFixed(2);
+      } else if (type === 'SALE_DRIED') {
+        qtyLabel.textContent = 'Whole Dried Sold (kg)';
+        outDiv.classList.add('hidden');
+        rateDiv.classList.remove('hidden');
+        revBox.classList.remove('hidden');
+        rateInput.value = 2500;
+      } else if (type === 'PROCESS_POWDER') {
+        qtyLabel.textContent = 'Whole Dried Input (kg)';
+        outDiv.classList.remove('hidden');
+        outLabel.textContent = 'Shiitake Powder Output (kg)';
+        rateDiv.classList.add('hidden');
+        revBox.classList.add('hidden');
+        rateInput.value = 0;
+        const q = Number(document.getElementById('txQtyKg').value || 0);
+        document.getElementById('txOutputKg').value = (q * 0.95).toFixed(2);
+      } else if (type === 'SALE_POWDER') {
+        qtyLabel.textContent = 'Shiitake Powder Sold (kg)';
+        outDiv.classList.add('hidden');
+        rateDiv.classList.remove('hidden');
+        revBox.classList.remove('hidden');
+        rateInput.value = 3000;
+      }
+      recalcTxPreview();
+    }
+
+    function recalcTxPreview() {
+      const q = Number(document.getElementById('txQtyKg').value || 0);
+      const r = Number(document.getElementById('txRate').value || 0);
+      const type = document.getElementById('txActionType').value;
+      if (type === 'PROCESS_DRY') {
+        document.getElementById('txOutputKg').value = (q * 0.12).toFixed(2);
+      } else if (type === 'PROCESS_POWDER') {
+        document.getElementById('txOutputKg').value = (q * 0.95).toFixed(2);
+      }
+      document.getElementById('txRevPreview').textContent = `₹${(q * r).toLocaleString()}`;
+    }
+
+    function renderAll() {
+      const filter = document.getElementById('facilityFilter').value;
+      const filteredBatches = filter === 'ALL' ? state.batches : state.batches.filter(b => b.room === filter);
+
+      let trueActiveIncubation = 0;
+      let totalSoldRtf = 0;
+      state.batches.forEach(b => {
+        const init = Number(b.initialBlocks || 500);
+        const disc = Number(b.discardedBlocks || 0);
+        const sold = Number(b.soldRtfBlocks || 0);
+        const trans = Number(b.transferredBlocks || 0);
+        trueActiveIncubation += Math.max(0, init - (disc + sold + trans));
+        totalSoldRtf += sold;
+      });
+
+      const totalPolyBlocks = state.polyBatches.reduce((s, pb) => s + Number(pb.blocksTransferred), 0);
+      const rtfRevenue = totalSoldRtf * 200;
+      const inv = computeInventoryMetrics();
+
+      document.getElementById('kpiTotalBlocks').textContent = trueActiveIncubation.toLocaleString();
+      document.getElementById('kpiFruiting').textContent = totalPolyBlocks.toLocaleString();
+      document.getElementById('kpiFreshInHand').textContent = `${inv.freshInHand.toFixed(2)} kg`;
+      document.getElementById('kpiTotalYieldSub').textContent = `Total Picked: ${inv.totalPickedFresh.toFixed(1)} kg`;
+      document.getElementById('kpiDriedStock').textContent = `${inv.driedInHand.toFixed(2)} kg`;
+      document.getElementById('kpiPowderStock').textContent = `${inv.powderInHand.toFixed(2)} kg`;
+      document.getElementById('kpiTotalRevenue').textContent = `₹${(inv.totalProductSalesRevenue + rtfRevenue).toLocaleString()}`;
+      document.getElementById('kpiRtfRevSub').textContent = `Prod: ₹${inv.totalProductSalesRevenue.toLocaleString()} | RTF: ₹${rtfRevenue.toLocaleString()}`;
+
+      const gasInput = document.getElementById('gasUrlInput');
+      if (gasInput) gasInput.value = state.gasUrl || '';
+
+      renderRoomCards();
+      renderAuditSummaryCards(inv, totalSoldRtf, rtfRevenue);
+      renderChecklist();
+      renderWorkerAudit();
+      renderBatches(filteredBatches);
+      renderPolyBatches();
+      renderSoakLogs();
+      renderClimateLogs(filter);
+      renderHarvests();
+      renderSalesLedger();
+      renderPinManager();
+      if (isAdmin()) {
+        renderChart();
+        runSubstrateCalc();
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderAuditSummaryCards(inv, totalSoldRtf, rtfRevenue) {
+      const container = document.getElementById('auditSummaryCards');
+      if (!container) return;
+      container.innerHTML = `
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1">
+          <div class="text-emerald-400 font-bold">Fresh Shiitake (@ ₹800/kg)</div>
+          <div class="flex justify-between text-slate-400"><span>Picked Total:</span><span class="font-mono text-white">${inv.totalPickedFresh.toFixed(2)} kg</span></div>
+          <div class="flex justify-between text-slate-400"><span>Sold Fresh:</span><span class="font-mono text-emerald-300">${inv.freshSold.toFixed(2)} kg</span></div>
+          <div class="flex justify-between text-slate-400"><span>Sent to Dryer:</span><span class="font-mono text-amber-300">${inv.freshSentToDryer.toFixed(2)} kg</span></div>
+          <div class="flex justify-between text-slate-400"><span>Fresh In Hand:</span><span class="font-mono text-white font-bold">${inv.freshInHand.toFixed(2)} kg</span></div>
+          <div class="flex justify-between border-t border-slate-800 pt-1 text-emerald-400 font-bold"><span>Fresh Sales:</span><span class="font-mono">₹${inv.freshRevenue.toLocaleString()}</span></div>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1">
+          <div class="text-amber-400 font-bold">Whole Dried (@ ₹2,500/kg)</div>
+          <div class="flex justify-between text-slate-400"><span>Total Dried Made:</span><span class="font-mono text-white">${inv.driedProduced.toFixed(2)} kg</span></div>
+          <div class="flex justify-between text-slate-400"><span>Sold Whole Dried:</span><span class="font-mono text-amber-300">${inv.driedSold.toFixed(2)} kg</span></div>
+          <div class="flex justify-between text-slate-400"><span>Ground to Powder:</span><span class="font-mono text-purple-300">${inv.driedSentToPowder.toFixed(2)} kg</span></div>
+          <div class="flex justify-between text-slate-400"><span>Dried Stock Left:</span><span class="font-mono text-white font-bold">${inv.driedInHand.toFixed(2)} kg</span></div>
+          <div class="flex justify-between border-t border-slate-800 pt-1 text-amber-400 font-bold"><span>Dried Sales:</span><span class="font-mono">₹${inv.driedRevenue.toLocaleString()}</span></div>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1">
+          <div class="text-purple-400 font-bold">Shiitake Powder (@ ₹3,000/kg)</div>
+          <div class="flex justify-between text-slate-400"><span>Powder Produced:</span><span class="font-mono text-white">${inv.powderProduced.toFixed(2)} kg</span></div>
+          <div class="flex justify-between text-slate-400"><span>Powder Sold:</span><span class="font-mono text-purple-300">${inv.powderSold.toFixed(2)} kg</span></div>
+          <div class="flex justify-between text-slate-400"><span>Powder In Hand:</span><span class="font-mono text-white font-bold">${inv.powderInHand.toFixed(2)} kg</span></div>
+          <div class="flex justify-between border-t border-slate-800 pt-1 text-purple-400 font-bold"><span>Powder Sales:</span><span class="font-mono">₹${inv.powderRevenue.toLocaleString()}</span></div>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1">
+          <div class="text-sky-400 font-bold">RTF Blocks (@ ₹200/block)</div>
+          <div class="flex justify-between text-slate-400"><span>RTF Blocks Sold:</span><span class="font-mono text-white">${totalSoldRtf} blocks</span></div>
+          <div class="flex justify-between text-slate-400"><span>RTF Revenue:</span><span class="font-mono text-sky-300">₹${rtfRevenue.toLocaleString()}</span></div>
+          <div class="flex justify-between border-t border-slate-800 pt-1 text-emerald-300 font-bold"><span>Grand Total Rev:</span><span class="font-mono">₹${(inv.totalProductSalesRevenue + rtfRevenue).toLocaleString()}</span></div>
+        </div>
+      `;
+    }
+
+    function renderWorkerAudit() {
+      const container = document.getElementById('workerAuditSummary');
+      if (!container) return;
+      container.innerHTML = state.users.map(u => {
+        const cCount = state.climateLogs.filter(c => c.by === u.name).length;
+        const hCount = state.harvests.filter(h => h.by === u.name).length;
+        const sCount = state.salesLedger.filter(s => s.by === u.name).length;
+        return `
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5">
+            <div class="font-bold text-white truncate">${u.name}</div>
+            <div class="text-[11px] text-sky-400 font-mono mt-1">Weather: ${cCount}</div>
+            <div class="text-[11px] text-emerald-400 font-mono">Harvests: ${hCount}</div>
+            <div class="text-[11px] text-amber-400 font-mono">Sales/Proc: ${sCount}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPinManager() {
+      const container = document.getElementById('pinManagerList');
+      if (!container) return;
+      container.innerHTML = state.users.map((u, idx) => `
+        <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+          <div>
+            <span class="font-bold text-white">${u.name}</span>
+            <span class="text-[10px] font-mono ml-2 px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">${u.role}</span>
+          </div>
+          <input type="text" id="pin_edit_${idx}" value="${u.pin}" maxlength="6" class="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-center font-mono text-emerald-400" />
+        </div>
+      `).join('');
+    }
+
+    function saveUpdatedPins() {
+      state.users.forEach((u, idx) => {
+        const val = document.getElementById(`pin_edit_${idx}`).value.trim();
+        if (val) u.pin = val;
+      });
+      saveState();
+      alert('Operator PINs updated!');
+    }
+
+    function renderRoomCards() {
+      const rooms = ['Incubation Room 1', 'Incubation Room 2', 'Polyhouse 1', 'Polyhouse 2'];
+      const container = document.getElementById('roomCardsContainer');
+      if (!container) return;
+      container.innerHTML = rooms.map(r => {
+        const isPoly = r.startsWith('Polyhouse');
+        let blocks = 0;
+        if (isPoly) {
+          blocks = state.polyBatches.filter(pb => pb.room === r).reduce((s, pb) => s + Number(pb.blocksTransferred), 0);
+        } else {
+          state.batches.filter(b => b.room === r).forEach(b => {
+            const init = Number(b.initialBlocks || 500);
+            const disc = Number(b.discardedBlocks || 0);
+            const sold = Number(b.soldRtfBlocks || 0);
+            const trans = Number(b.transferredBlocks || 0);
+            blocks += Math.max(0, init - (disc + sold + trans));
+          });
+        }
+        const latestLog = state.climateLogs.find(c => c.room === r) || { temp: '--', rh: '--', fogger: 'OFF', vent: '--', by: '--' };
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-white">${r}</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded ${isPoly ? 'bg-sky-500/15 text-sky-300' : 'bg-amber-500/15 text-amber-300'}">
+                ${isPoly ? 'Fruiting Zone' : '120-150d Spawn'}
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-center bg-slate-950 rounded-lg p-2.5 border border-slate-800/80">
+              <div>
+                <div class="text-[10px] text-slate-400">Manual Temp</div>
+                <div class="text-base font-mono font-bold text-emerald-400">${latestLog.temp}°C</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-400">Manual RH%</div>
+                <div class="text-base font-mono font-bold text-sky-400">${latestLog.rh}%</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-400 space-y-1">
+              <div class="flex justify-between"><span>Active Blocks:</span><strong class="text-white font-mono">${blocks} (${blocks}kg dry)</strong></div>
+              <div class="flex justify-between"><span>Fogger Status:</span><strong class="text-emerald-300">${latestLog.fogger}</strong></div>
+              <div class="flex justify-between"><span>Last Checked By:</span><strong class="text-sky-300">${latestLog.by || 'N/A'}</strong></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderChecklist() {
+      const el = document.getElementById('checklistContainer');
+      if (!el) return;
+      el.innerHTML = state.checklist.map((item, idx) => `
+        <label class="flex items-start gap-2.5 p-2 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer">
+          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleCheck(${idx})" class="mt-0.5 accent-emerald-500" />
+          <span class="${item.done ? 'line-through text-slate-500' : 'text-slate-200'}">${item.text}</span>
+        </label>
+      `).join('');
+    }
+
+    function toggleCheck(idx) {
+      state.checklist[idx].done = !state.checklist[idx].done;
+      saveState();
+      renderChecklist();
+    }
+
+    function resetChecklist() {
+      state.checklist.forEach(c => c.done = false);
+      saveState();
+      renderChecklist();
+    }
+
+    function renderBatches(batches) {
+      const tbody = document.getElementById('batchTableBody');
+      const adminMode = isAdmin();
+      tbody.innerHTML = batches.map(b => {
+        const age = daysBetween(b.date);
+        const init = Number(b.initialBlocks || 500);
+        const disc = Number(b.discardedBlocks || 0);
+        const sold = Number(b.soldRtfBlocks || 0);
+        const trans = Number(b.transferredBlocks || 0);
+        const trueActive = Math.max(0, init - (disc + sold + trans));
+        const stageOpts = STAGES.map(s => `<option value="${s}" ${s === b.stage ? 'selected' : ''}>${s}</option>`).join('');
+        return `
+          <tr>
+            <td class="py-2.5 px-2">
+              <div class="font-mono font-bold text-white">${b.code}</div>
+              <div class="text-[11px] text-slate-400">${b.room}</div>
+            </td>
+            <td class="py-2.5 px-2 font-mono">
+              <span class="${age >= 120 ? 'text-emerald-400 font-bold' : 'text-amber-300'}">${age} d</span>
+            </td>
+            <td class="py-2.5 px-2 font-mono text-white">${init}</td>
+            <td class="py-2.5 px-2">
+              <input type="number" min="0" value="${disc}" onchange="updateBatchDisposition('${b.id}', 'disc', this.value)" class="w-20 bg-slate-950 border border-rose-500/50 rounded px-2 py-1 font-mono text-rose-300" />
+            </td>
+            <td class="py-2.5 px-2">
+              <input type="number" min="0" value="${sold}" onchange="updateBatchDisposition('${b.id}', 'sold', this.value)" class="w-20 bg-slate-950 border border-amber-500/50 rounded px-2 py-1 font-mono text-amber-300" />
+            </td>
+            <td class="py-2.5 px-2 font-mono text-sky-300">${trans}</td>
+            <td class="py-2.5 px-2 font-mono font-bold text-emerald-400 text-sm">${trueActive}</td>
+            <td class="py-2.5 px-2 text-[11px]">
+              ${adminMode ? `<select onchange="updateBatchStage('${b.id}', this.value)" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-sky-300">${stageOpts}</select>` : `<span class="text-sky-300">${b.stage}</span>`}
+              <div class="text-[10px] text-slate-400 mt-0.5">By: ${b.by || 'Admin'}</div>
+            </td>
+            ${adminMode ? `<td class="py-2.5 px-2 whitespace-nowrap space-x-2"><button onclick="openEditBatchModal('${b.id}')" class="text-sky-400 hover:text-sky-300 text-xs font-semibold">Edit</button><button onclick="deleteBatch('${b.id}')" class="text-rose-400 hover:text-rose-300 text-xs">Delete</button></td>` : ''}
+          </tr>
+        `;
+      }).join('');
+
+      const pbSourceSelect = document.getElementById('pbSourceBatch');
+      if (pbSourceSelect) {
+        pbSourceSelect.innerHTML = state.batches.map(b => `<option value="${b.code}">${b.code} (${b.room})</option>`).join('');
+      }
+    }
+
+    function renderPolyBatches() {
+      const tbody = document.getElementById('polyBatchTableBody');
+      const adminMode = isAdmin();
+      tbody.innerHTML = state.polyBatches.map(pb => {
+        const fy = getPolyBatchFlushYields(pb.polyCode);
+        const be = pb.blocksTransferred > 0 ? ((fy.total / Number(pb.blocksTransferred)) * 100).toFixed(1) : '0.0';
+        const ageDays = daysBetween(pb.transferDate);
+        return `
+          <tr>
+            <td class="py-2.5 px-2">
+              <div class="font-mono font-bold text-sky-300">${pb.polyCode}</div>
+              <div class="text-[10px] text-slate-400">From: ${pb.incubationBatch}</div>
+            </td>
+            <td class="py-2.5 px-2">
+              <div class="text-slate-200 font-medium">${pb.room}</div>
+              <div class="text-[10px] font-mono text-slate-400">Opened: ${pb.transferDate}</div>
+            </td>
+            <td class="py-2.5 px-2 font-mono text-amber-300 font-bold">${ageDays} d</td>
+            <td class="py-2.5 px-2 font-mono text-white">${pb.blocksTransferred}</td>
+            <td class="py-2.5 px-2 font-mono text-sky-300">${fy.f1.toFixed(2)} kg</td>
+            <td class="py-2.5 px-2 font-mono text-amber-300">${fy.f2.toFixed(2)} kg</td>
+            <td class="py-2.5 px-2 font-mono text-purple-300">${fy.f3.toFixed(2)} kg</td>
+            <td class="py-2.5 px-2 font-mono text-pink-300">${fy.f4.toFixed(2)} kg</td>
+            <td class="py-2.5 px-2 font-mono font-bold text-emerald-400 text-sm">${fy.total.toFixed(2)} kg</td>
+            <td class="py-2.5 px-2 font-mono font-bold text-emerald-300">${be}%</td>
+            ${adminMode ? `<td class="py-2.5 px-2"><button onclick="deletePolyBatch('${pb.id}')" class="text-rose-400 hover:text-rose-300 text-xs">Delete</button></td>` : ''}
+          </tr>
+        `;
+      }).join('');
+
+      const polyOpts = state.polyBatches.map(pb => `<option value="${pb.polyCode}">${pb.polyCode} (${pb.room} - ${pb.blocksTransferred} blocks)</option>`).join('');
+      const hSelect = document.getElementById('hBatch');
+      if (hSelect) hSelect.innerHTML = polyOpts;
+      const sSelect = document.getElementById('sBatch');
+      if (sSelect) sSelect.innerHTML = polyOpts;
+    }
+
+    function renderSoakLogs() {
+      const tbody = document.getElementById('soakLogTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = state.soakLogs.map(s => `
+        <tr>
+          <td class="py-2 px-2 font-mono font-bold text-white">${s.polyCode}</td>
+          <td class="py-2 px-2 text-amber-300 font-medium">${s.flush}</td>
+          <td class="py-2 px-2 font-mono text-slate-300">${s.soakDate}</td>
+          <td class="py-2 px-2 font-mono text-sky-300">${s.estPinDate}</td>
+          <td class="py-2 px-2 font-mono text-emerald-300">${s.estHarvestDate}</td>
+          <td class="py-2 px-2 text-slate-300">${s.notes || '-'}</td>
+          <td class="py-2 px-2 flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono ${s.status === 'Harvested' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">${s.status}</span>
+            ${s.status !== 'Harvested' ? `<button onclick="markSoakHarvested('${s.id}')" class="text-[10px] underline text-sky-300 hover:text-white">Mark Harvested</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function addSoakLog(e) {
+      e.preventDefault();
+      const soakDate = document.getElementById('sDate').value;
+      const item = {
+        id: 'S' + Date.now(),
+        polyCode: document.getElementById('sBatch').value,
+        flush: document.getElementById('sFlush').value,
+        soakDate: soakDate,
+        estPinDate: addDaysToDate(soakDate, 5),
+        estHarvestDate: addDaysToDate(soakDate, 11),
+        notes: document.getElementById('sNotes').value.trim(),
+        status: 'Active Pinning',
+        by: currentUser ? currentUser.name : 'Cultivator'
+      };
+      state.soakLogs.unshift(item);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'ADD_SOAK_LOG', item: item });
+      e.target.reset();
+      document.getElementById('sDate').value = new Date().toISOString().slice(0, 10);
+    }
+
+    function markSoakHarvested(id) {
+      const s = state.soakLogs.find(x => x.id === id);
+      if (s) {
+        s.status = 'Harvested';
+        saveState();
+        renderAll();
+        postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+      }
+    }
+
+    function addBatch(e) {
+      e.preventDefault();
+      if (!isAdmin()) return;
+      const newB = {
+        id: 'B' + Date.now(),
+        code: document.getElementById('bCode').value.trim(),
+        strain: document.getElementById('bStrain').value.trim(),
+        room: document.getElementById('bRoom').value,
+        initialBlocks: Number(document.getElementById('bCount').value),
+        discardedBlocks: 0,
+        soldRtfBlocks: 0,
+        transferredBlocks: 0,
+        date: document.getElementById('bDate').value,
+        sampleWt: 2.50,
+        stage: STAGES[0],
+        by: currentUser ? currentUser.name : 'Admin'
+      };
+      state.batches.unshift(newB);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+      e.target.reset();
+    }
+
+    function addPolyBatch(e) {
+      e.preventDefault();
+      const code = document.getElementById('pbCode').value.trim();
+      const incCode = document.getElementById('pbSourceBatch').value;
+      const room = document.getElementById('pbRoom').value;
+      const count = Number(document.getElementById('pbBlocks').value);
+      const date = document.getElementById('pbDate').value;
+
+      const bObj = state.batches.find(b => b.code === incCode);
+      if (bObj) {
+        bObj.transferredBlocks = Number(bObj.transferredBlocks || 0) + count;
+      }
+
+      const newPb = {
+        id: 'PB' + Date.now(),
+        polyCode: code,
+        incubationBatch: incCode,
+        room: room,
+        blocksTransferred: count,
+        transferDate: date,
+        status: 'Active Fruiting',
+        by: currentUser ? currentUser.name : 'Cultivator'
+      };
+
+      state.polyBatches.unshift(newPb);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+      e.target.reset();
+      document.getElementById('pbDate').value = new Date().toISOString().slice(0, 10);
+    }
+
+    function updateBatchDisposition(id, type, val) {
+      const b = state.batches.find(x => x.id === id);
+      if (b) {
+        if (type === 'disc') b.discardedBlocks = Number(val);
+        if (type === 'sold') b.soldRtfBlocks = Number(val);
+        b.by = currentUser ? currentUser.name : 'Worker';
+        saveState();
+        renderAll();
+        postToGoogleSheet({ action: 'UPDATE_BATCH_DISPOSITION', id: id, discardedBlocks: b.discardedBlocks, soldRtfBlocks: b.soldRtfBlocks, by: b.by });
+      }
+    }
+
+    function updateBatchStage(id, st) {
+      if (!isAdmin()) return;
+      const b = state.batches.find(x => x.id === id);
+      if (b) {
+        b.stage = st;
+        b.by = currentUser ? currentUser.name : 'Admin';
+        saveState();
+        renderAll();
+        postToGoogleSheet({ action: 'UPDATE_BATCH_DISPOSITION', id: id, stage: st, by: b.by });
+      }
+    }
+
+
+    function openEditBatchModal(id) {
+      if (!isAdmin()) return;
+      const b = state.batches.find(x => x.id === id);
+      if (!b) return;
+      document.getElementById('ebId').value = b.id;
+      document.getElementById('ebCode').value = b.code;
+      document.getElementById('ebStrain').value = b.strain || 'DMRO-356 (Poplar)';
+      document.getElementById('ebRoom').value = b.room || 'Incubation Room 1';
+      document.getElementById('ebDate').value = formatDateForInput(b.date);
+      document.getElementById('ebInitial').value = Number(b.initialBlocks || 0);
+      document.getElementById('ebDiscarded').value = Number(b.discardedBlocks || 0);
+      document.getElementById('ebSoldRtf').value = Number(b.soldRtfBlocks || 0);
+      document.getElementById('ebTransferred').value = Number(b.transferredBlocks || 0);
+      document.getElementById('editBatchModal').classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeEditBatchModal() {
+      document.getElementById('editBatchModal').classList.add('hidden');
+    }
+
+    function saveEditedBatch(e) {
+      e.preventDefault();
+      if (!isAdmin()) return;
+      const id = document.getElementById('ebId').value;
+      const b = state.batches.find(x => x.id === id);
+      if (!b) return;
+      const oldCode = b.code;
+      const newCode = document.getElementById('ebCode').value.trim();
+      b.code = newCode;
+      b.strain = document.getElementById('ebStrain').value.trim();
+      b.room = document.getElementById('ebRoom').value;
+      b.date = document.getElementById('ebDate').value;
+      b.initialBlocks = Number(document.getElementById('ebInitial').value || 0);
+      b.discardedBlocks = Number(document.getElementById('ebDiscarded').value || 0);
+      b.soldRtfBlocks = Number(document.getElementById('ebSoldRtf').value || 0);
+      b.transferredBlocks = Number(document.getElementById('ebTransferred').value || 0);
+      b.by = currentUser ? currentUser.name : 'Admin';
+
+      if (oldCode !== newCode) {
+        state.polyBatches.forEach(pb => {
+          if (pb.incubationBatch === oldCode) pb.incubationBatch = newCode;
+        });
+      }
+
+      saveState();
+      closeEditBatchModal();
+      renderAll();
+      postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+    }
+
+    function recalculateTransferredFromPolyBatches() {
+      state.batches.forEach(b => {
+        const sumTransferred = state.polyBatches
+          .filter(pb => String(pb.incubationBatch).trim() === String(b.code).trim())
+          .reduce((sum, pb) => sum + Number(pb.blocksTransferred || 0), 0);
+        b.transferredBlocks = sumTransferred;
+      });
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+      alert('Transferred block counts recalculated from Polyhouse Opening Batches and synced!');
+    }
+
+    function deleteBatch(id) {
+      if (!isAdmin()) return;
+      state.batches = state.batches.filter(x => x.id !== id);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+    }
+
+    function deletePolyBatch(id) {
+      if (!isAdmin()) return;
+      state.polyBatches = state.polyBatches.filter(x => x.id !== id);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+    }
+
+    function renderClimateLogs(filter) {
+      const logs = filter === 'ALL' ? state.climateLogs : state.climateLogs.filter(c => c.room === filter);
+      const tbody = document.getElementById('climateTableBody');
+      const adminMode = isAdmin();
+      tbody.innerHTML = logs.map(c => {
+        let adv = '<span class="text-emerald-400">Optimal Range</span>';
+        if (c.room.startsWith('Polyhouse') && c.temp > 23) adv = '<span class="text-amber-400">High Temp: Run Fogger + Exhaust</span>';
+        if (c.room.startsWith('Polyhouse') && c.rh < 82) adv = '<span class="text-sky-400">Low RH: Trigger Manual Fogger</span>';
+        return `
+          <tr>
+            <td class="py-2 px-2 font-mono text-slate-300">${c.time}</td>
+            <td class="py-2 px-2 font-semibold text-white">${c.room}</td>
+            <td class="py-2 px-2 font-mono text-emerald-400">${c.temp}°C</td>
+            <td class="py-2 px-2 font-mono text-sky-400">${c.rh}%</td>
+            <td class="py-2 px-2 text-slate-200">${c.fogger}</td>
+            <td class="py-2 px-2 text-slate-300">${c.vent}</td>
+            <td class="py-2 px-2 font-mono text-xs text-sky-300">${c.by || 'N/A'}</td>
+            <td class="py-2 px-2">${adv}</td>
+            ${adminMode ? `<td class="py-2 px-2"><button onclick="deleteClimate('${c.id}')" class="text-rose-400 hover:text-rose-300 text-xs">Delete</button></td>` : ''}
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function addClimateLog(e) {
+      e.preventDefault();
+      const today = new Date().toISOString().slice(0, 10);
+      const item = {
+        id: 'C' + Date.now(),
+        time: `${today} ${document.getElementById('cShift').value}`,
+        room: document.getElementById('cRoom').value,
+        temp: Number(document.getElementById('cTemp').value),
+        rh: Number(document.getElementById('cRH').value),
+        fogger: document.getElementById('cFogger').value,
+        vent: document.getElementById('cVent').value,
+        by: currentUser ? currentUser.name : 'Cultivator'
+      };
+      state.climateLogs.unshift(item);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'ADD_CLIMATE', item: item });
+    }
+
+    function deleteClimate(id) {
+      if (!isAdmin()) return;
+      state.climateLogs = state.climateLogs.filter(c => c.id !== id);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+    }
+
+    function renderHarvests() {
+      const tbody = document.getElementById('harvestTableBody');
+      const adminMode = isAdmin();
+      let sumFresh = 0;
+      tbody.innerHTML = state.harvests.map(h => {
+        const tot = Number(h.gradeA || 0) + Number(h.gradeB || 0) + Number(h.cull || 0);
+        sumFresh += tot;
+        return `
+          <tr>
+            <td class="py-2 px-2 font-mono text-slate-300">${h.date}</td>
+            <td class="py-2 px-2 font-mono font-bold text-white">${h.batch}</td>
+            <td class="py-2 px-2 text-sky-300">${h.flush}</td>
+            <td class="py-2 px-2 font-mono text-slate-300">${h.gradeA} / ${h.gradeB} / ${h.cull}</td>
+            <td class="py-2 px-2 font-mono font-bold text-emerald-400">${tot.toFixed(2)} kg</td>
+            <td class="py-2 px-2 font-mono text-[11px] text-slate-400">${h.by || 'N/A'}</td>
+            ${adminMode ? `<td class="py-2 px-2"><button onclick="deleteHarvest('${h.id}')" class="text-rose-400 hover:text-rose-300 text-xs">Del</button></td>` : ''}
+          </tr>
+        `;
+      }).join('');
+      const tag = document.getElementById('ledgerFreshSumTag');
+      if (tag) tag.textContent = `Total: ${sumFresh.toFixed(2)} kg`;
+    }
+
+    function addHarvestLog(e) {
+      e.preventDefault();
+      const item = {
+        id: 'H' + Date.now(),
+        date: document.getElementById('hDate').value || new Date().toISOString().slice(0, 10),
+        batch: document.getElementById('hBatch').value,
+        flush: document.getElementById('hFlush').value,
+        gradeA: Number(document.getElementById('hGradeA').value || 0),
+        gradeB: Number(document.getElementById('hGradeB').value || 0),
+        cull: Number(document.getElementById('hCull').value || 0),
+        notes: '',
+        by: currentUser ? currentUser.name : 'Cultivator'
+      };
+      state.harvests.unshift(item);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'ADD_HARVEST', item: item });
+      document.getElementById('hGradeA').value = 0;
+      document.getElementById('hGradeB').value = 0;
+      document.getElementById('hCull').value = 0;
+      updateLiveFreshTotal();
+    }
+
+    function deleteHarvest(id) {
+      if (!isAdmin()) return;
+      state.harvests = state.harvests.filter(h => h.id !== id);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+    }
+
+    function renderSalesLedger() {
+      const tbody = document.getElementById('salesLedgerTableBody');
+      if (!tbody) return;
+      const adminMode = isAdmin();
+      let totalRev = 0;
+      const labelsMap = {
+        'SALE_FRESH': { label: 'Sold Fresh', color: 'text-emerald-300' },
+        'PROCESS_DRY': { label: 'Fresh → Whole Dried', color: 'text-amber-300' },
+        'SALE_DRIED': { label: 'Sold Whole Dried', color: 'text-amber-400' },
+        'PROCESS_POWDER': { label: 'Dried → Powder', color: 'text-purple-300' },
+        'SALE_POWDER': { label: 'Sold Shiitake Powder', color: 'text-purple-400' }
+      };
+
+      tbody.innerHTML = state.salesLedger.map(tx => {
+        totalRev += Number(tx.revenue || 0);
+        const meta = labelsMap[tx.actionType] || { label: tx.actionType, color: 'text-white' };
+        const qtyDisplay = tx.outputKg > 0
+          ? `${Number(tx.qtyKg).toFixed(2)} kg → <strong class="text-white">${Number(tx.outputKg).toFixed(2)} kg</strong>`
+          : `${Number(tx.qtyKg).toFixed(2)} kg`;
+        return `
+          <tr>
+            <td class="py-2 px-2 font-mono text-slate-300">${tx.date}</td>
+            <td class="py-2 px-2 font-semibold ${meta.color}">${meta.label}</td>
+            <td class="py-2 px-2 font-mono text-slate-200">${qtyDisplay}</td>
+            <td class="py-2 px-2 font-mono text-slate-400">${tx.rate > 0 ? '₹' + tx.rate : '-'}</td>
+            <td class="py-2 px-2 font-mono font-bold text-emerald-400">${tx.revenue > 0 ? '₹' + Number(tx.revenue).toLocaleString() : '-'}</td>
+            <td class="py-2 px-2 text-[11px] text-slate-400">${tx.notes || ''} <span class="font-mono text-sky-300">(${tx.by || 'N/A'})</span></td>
+            ${adminMode ? `<td class="py-2 px-2"><button onclick="deleteSalesTx('${tx.id}')" class="text-rose-400 hover:text-rose-300 text-xs">Del</button></td>` : ''}
+          </tr>
+        `;
+      }).join('');
+      const tag = document.getElementById('ledgerSalesSumTag');
+      if (tag) tag.textContent = `Sales: ₹${totalRev.toLocaleString()}`;
+    }
+
+    function addSalesOrProcessingTx(e) {
+      e.preventDefault();
+      const actionType = document.getElementById('txActionType').value;
+      const qtyKg = Number(document.getElementById('txQtyKg').value || 0);
+      const outputKg = (actionType === 'PROCESS_DRY' || actionType === 'PROCESS_POWDER')
+        ? Number(document.getElementById('txOutputKg').value || 0)
+        : 0;
+      const rate = (actionType === 'SALE_FRESH' || actionType === 'SALE_DRIED' || actionType === 'SALE_POWDER')
+        ? Number(document.getElementById('txRate').value || 0)
+        : 0;
+      const revenue = qtyKg * rate;
+
+      const productMap = {
+        'SALE_FRESH': 'Fresh Shiitake',
+        'PROCESS_DRY': 'Whole Dried Shiitake',
+        'SALE_DRIED': 'Whole Dried Shiitake',
+        'PROCESS_POWDER': 'Shiitake Powder',
+        'SALE_POWDER': 'Shiitake Powder'
+      };
+
+      const item = {
+        id: 'TX' + Date.now(),
+        date: document.getElementById('txDate').value || new Date().toISOString().slice(0, 10),
+        actionType: actionType,
+        product: productMap[actionType],
+        qtyKg: qtyKg,
+        outputKg: outputKg,
+        rate: rate,
+        revenue: revenue,
+        notes: document.getElementById('txNotes').value.trim(),
+        by: currentUser ? currentUser.name : 'Cultivator'
+      };
+
+      state.salesLedger.unshift(item);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'ADD_SALES_TX', item: item });
+      document.getElementById('txNotes').value = '';
+    }
+
+    function deleteSalesTx(id) {
+      if (!isAdmin()) return;
+      state.salesLedger = state.salesLedger.filter(tx => tx.id !== id);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+    }
+
+    function renderChart() {
+      const ctx = document.getElementById('yieldChart');
+      if (!ctx) return;
+      const labels = state.polyBatches.map(pb => pb.polyCode);
+      const yields = state.polyBatches.map(pb => getPolyBatchFlushYields(pb.polyCode).total);
+      const bes = state.polyBatches.map(pb => Number(((getPolyBatchFlushYields(pb.polyCode).total / Number(pb.blocksTransferred)) * 100).toFixed(1)));
+
+      if (yieldChartInstance) yieldChartInstance.destroy();
+      yieldChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Cumulative Fresh Yield (kg)', data: yields, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 6 },
+            { label: 'Biological Efficiency (BE %)', data: bes, backgroundColor: 'rgba(56, 189, 248, 0.7)', borderRadius: 6 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
+          }
+        }
+      });
+    }
+
+    function runSubstrateCalc() {
+      const el = document.getElementById('substrateCalcOutput');
+      if (!el) return;
+      const n = Number(document.getElementById('calcBlocks').value) || 0;
+      const totalWet = n * 2.5;
+      const totalDry = n * 1.0;
+      const totalWater = n * 1.5;
+      const totalBran = totalDry * 0.25;
+      const poplarWoodTotal = totalDry * 0.75;
+      const poplarSawdust = poplarWoodTotal * 0.50;
+      const poplarChips = poplarWoodTotal * 0.50;
+
+      const items = [
+        { label: 'Poplar Sawdust (50% of wood)', val: `${poplarSawdust.toFixed(1)} kg`, sub: '37.5% of total dry mass' },
+        { label: 'Poplar Wood Chips (50% of wood)', val: `${poplarChips.toFixed(1)} kg`, sub: '37.5% of total dry mass' },
+        { label: 'Rice + Wheat Bran (25% Combined)', val: `${totalBran.toFixed(1)} kg`, sub: '12.5% Rice + 12.5% Wheat Bran' },
+        { label: 'Water (60% Final Moisture)', val: `${totalWater.toFixed(1)} L`, sub: '1.50 L per 2.5kg block' },
+        { label: 'Total Mixed Wet Mass', val: `${totalWet.toFixed(1)} kg`, sub: `${totalDry.toFixed(0)} kg Total Dry Matter` }
+      ];
+
+      el.innerHTML = items.map(i => `
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <div class="text-[11px] text-slate-400">${i.label}</div>
+          <div class="text-lg font-mono font-bold text-emerald-400 mt-1">${i.val}</div>
+          <div class="text-[10px] text-slate-500 mt-0.5">${i.sub}</div>
+        </div>
+      `).join('');
+    }
+
+    function exportBackupJSON() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `shiitake_farm_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+    }
+
+    function exportHarvestCSV() {
+      const rows = [['Date', 'Batch', 'Flush', 'GradeA_kg', 'GradeB_kg', 'Cull_kg', 'TotalFresh_kg', 'LoggedBy']];
+      state.harvests.forEach(h => {
+        const tot = Number(h.gradeA || 0) + Number(h.gradeB || 0) + Number(h.cull || 0);
+        rows.push([h.date, h.batch, h.flush, h.gradeA, h.gradeB, h.cull, tot.toFixed(2), `"${h.by || ''}"`]);
+      });
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = 'shiitake_fresh_harvests.csv';
+      a.click();
+    }
+
+    function exportSalesCSV() {
+      const rows = [['Date', 'ActionType', 'Product', 'InputQty_kg', 'OutputQty_kg', 'Rate_INR', 'Revenue_INR', 'Notes', 'LoggedBy']];
+      state.salesLedger.forEach(tx => {
+        rows.push([tx.date, tx.actionType, `"${tx.product}"`, tx.qtyKg, tx.outputKg || 0, tx.rate || 0, tx.revenue || 0, `"${tx.notes || ''}"`, `"${tx.by || ''}"`]);
+      });
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = 'shiitake_sales_processing_audit.csv';
+      a.click();
+    }
+
+    function exportClimateCSV() {
+      const rows = [['Timestamp', 'Room', 'Temp_C', 'RH_Pct', 'Fogger', 'Ventilation', 'LoggedBy']];
+      state.climateLogs.forEach(c => rows.push([c.time, c.room, c.temp, c.rh, c.fogger, c.vent, `"${c.by || ''}"`]));
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = 'shiitake_climate_log.csv';
+      a.click();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById('bDate').value = today;
+      document.getElementById('pbDate').value = today;
+      document.getElementById('hDate').value = today;
+      document.getElementById('txDate').value = today;
+      document.getElementById('sDate').value = today;
+      onTxTypeChange();
+      renderAll();
+    });
+  </script>
+</body>
+</html>

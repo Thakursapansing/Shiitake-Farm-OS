@@ -1,0 +1,6 @@
+{
+  "appId": "com.shiitakefarm.os",
+  "appName": "Shiitake Farm OS",
+  "webDir": ".",
+  "bundledWebRuntime": false
+}
