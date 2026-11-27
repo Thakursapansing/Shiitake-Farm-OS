@@ -273,18 +273,18 @@
           </div>
           <div>
             <label class="block text-slate-400 mb-1">Grade A (kg)</label>
-            <input id="hGradeA" type="number" step="0.05" min="0" value="0" oninput="updateLiveFreshTotal()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+            <input id="hGradeA" type="number" step="0.001" min="0" value="0" oninput="updateLiveFreshTotal()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
           </div>
           <div>
             <label class="block text-slate-400 mb-1">Grade B (kg)</label>
-            <input id="hGradeB" type="number" step="0.05" min="0" value="0" oninput="updateLiveFreshTotal()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+            <input id="hGradeB" type="number" step="0.001" min="0" value="0" oninput="updateLiveFreshTotal()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
           </div>
           <div>
             <label class="block text-slate-400 mb-1">Culled (kg)</label>
-            <input id="hCull" type="number" step="0.05" min="0" value="0" oninput="updateLiveFreshTotal()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+            <input id="hCull" type="number" step="0.001" min="0" value="0" oninput="updateLiveFreshTotal()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
           </div>
           <div class="flex flex-col justify-between">
-            <div class="text-[11px] text-slate-400">Cumulative Fresh: <strong id="liveFreshTotalPreview" class="text-emerald-400 font-mono text-sm">0.00 kg</strong></div>
+            <div class="text-[11px] text-slate-400">Cumulative Fresh: <strong id="liveFreshTotalPreview" class="text-emerald-400 font-mono text-sm">0.000 kg</strong></div>
             <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 px-3 rounded-lg mt-1">
               + Add Fresh Harvest
             </button>
@@ -322,11 +322,11 @@
           </div>
           <div>
             <label id="txQtyLabel" class="block text-slate-400 mb-1">Fresh Qty Sold (kg)</label>
-            <input id="txQtyKg" type="number" step="0.05" min="0.05" value="1.0" oninput="recalcTxPreview()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
+            <input id="txQtyKg" type="number" step="0.001" min="0.001" value="1.0" oninput="recalcTxPreview()" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono" />
           </div>
           <div id="txOutputDiv" class="hidden">
             <label id="txOutputLabel" class="block text-amber-300 mb-1">Dried Output Obtained (kg)</label>
-            <input id="txOutputKg" type="number" step="0.05" min="0" value="0.12" class="w-full bg-slate-950 border border-amber-500/50 rounded-lg px-2.5 py-2 text-amber-300 font-mono" />
+            <input id="txOutputKg" type="number" step="0.001" min="0" value="0.12" class="w-full bg-slate-950 border border-amber-500/50 rounded-lg px-2.5 py-2 text-amber-300 font-mono" />
           </div>
           <div id="txRateDiv">
             <label class="block text-slate-400 mb-1">Sale Rate (₹/kg)</label>
@@ -504,7 +504,9 @@
               <th class="py-2 px-2">Polyhouse Batch</th>
               <th class="py-2 px-2">Room & Opened Date</th>
               <th class="py-2 px-2">Active Days</th>
-              <th class="py-2 px-2">Blocks (Dry kg)</th>
+              <th class="py-2 px-2">Opened</th>
+              <th class="py-2 px-2 text-rose-400">Discarded / Spent</th>
+              <th class="py-2 px-2 text-emerald-400">True Active</th>
               <th class="py-2 px-2 text-sky-300">Flush 1</th>
               <th class="py-2 px-2 text-amber-300">Flush 2</th>
               <th class="py-2 px-2 text-purple-300">Flush 3</th>
@@ -558,14 +560,22 @@
       </div>
 
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+        <!-- Annual / Cumulative Incubation Production & Failure Summary -->
+        <div id="incubationAnnualSummary" class="grid grid-cols-2 md:grid-cols-6 gap-2.5 mb-5"></div>
+
         <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div>
             <h3 class="text-sm font-bold text-white">Incubation Batches & Dispositions (Discarded / Sold RTF / Transferred)</h3>
             <span class="text-[11px] text-slate-400">True Active Incubation = Initial − (Discarded + Sold RTF + Transferred)</span>
           </div>
-          <button onclick="recalculateTransferredFromPolyBatches()" class="text-xs bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 font-semibold px-3 py-1.5 rounded-lg">
-            Recalculate Transferred from Polyhouse Batches
-          </button>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="cleanDuplicateBatchesNow()" class="text-xs bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-semibold px-3 py-1.5 rounded-lg">
+              Remove Duplicate Rows
+            </button>
+            <button onclick="recalculateTransferredFromPolyBatches()" class="text-xs bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 font-semibold px-3 py-1.5 rounded-lg">
+              Recalculate Transferred from Polyhouse Batches
+            </button>
+          </div>
         </div>
         <table class="w-full text-left border-collapse text-xs">
           <thead>
@@ -859,8 +869,8 @@
         { id: 'B2', code: 'POP-26-02', strain: 'DMRO-356 (Poplar)', room: 'Incubation Room 2', initialBlocks: 400, discardedBlocks: 20, soldRtfBlocks: 30, transferredBlocks: 350, date: '2026-04-15', sampleWt: 1.95, stage: '4. Ready ~2.0kg / Transfer', by: 'Cultivator 2 : K' }
       ],
       polyBatches: [
-        { id: 'PB1', polyCode: 'PH-POP-01', incubationBatch: 'POP-26-01', room: 'Polyhouse 1', blocksTransferred: 400, transferDate: '2026-09-01', status: 'Active Fruiting', by: 'Admin' },
-        { id: 'PB2', polyCode: 'PH-POP-02', incubationBatch: 'POP-26-02', room: 'Polyhouse 2', blocksTransferred: 350, transferDate: '2026-08-20', status: 'Active Fruiting', by: 'Cultivator 2 : K' }
+        { id: 'PB1', polyCode: 'PH-POP-01', incubationBatch: 'POP-26-01', room: 'Polyhouse 1', blocksTransferred: 400, discardedBlocks: 0, transferDate: '2026-09-01', status: 'Active Fruiting', by: 'Admin' },
+        { id: 'PB2', polyCode: 'PH-POP-02', incubationBatch: 'POP-26-02', room: 'Polyhouse 2', blocksTransferred: 350, discardedBlocks: 0, transferDate: '2026-08-20', status: 'Active Fruiting', by: 'Cultivator 2 : K' }
       ],
       soakLogs: [
         { id: 'S1', polyCode: 'PH-POP-02', flush: 'Flush 2', soakDate: '2026-11-15', estPinDate: '2026-11-20', estHarvestDate: '2026-11-26', notes: '5-6x daily spray 4 days', status: 'Active Pinning', by: 'Cultivator 2 : K' }
@@ -894,12 +904,56 @@
     if (!state.polyBatches) state.polyBatches = DEFAULT_STATE.polyBatches;
     if (!state.soakLogs) state.soakLogs = [];
     if (!state.salesLedger) state.salesLedger = [];
+    state.batches = deduplicateBatches(state.batches);
+    state.polyBatches = deduplicatePolyBatches(state.polyBatches);
     let currentUser = null;
     let yieldChartInstance = null;
 
     function saveState() {
+      state.batches = deduplicateBatches(state.batches);
+      state.polyBatches = deduplicatePolyBatches(state.polyBatches);
       localStorage.setItem('shiitake_poplar_os_v6', JSON.stringify(state));
     }
+
+    function deduplicateBatches(list) {
+      const map = new Map();
+      (list || []).forEach(b => {
+        const key = String(b.code || '').trim().toUpperCase();
+        if (!key) return;
+        const existing = map.get(key);
+        if (!existing) {
+          map.set(key, { ...b, code: String(b.code).trim() });
+        } else {
+          // Keep the record with higher disposition/transferred progress or latest data
+          const exScore = Number(existing.discardedBlocks || 0) + Number(existing.soldRtfBlocks || 0) + Number(existing.transferredBlocks || 0);
+          const newScore = Number(b.discardedBlocks || 0) + Number(b.soldRtfBlocks || 0) + Number(b.transferredBlocks || 0);
+          if (newScore >= exScore) {
+            map.set(key, { ...b, code: String(b.code).trim() });
+          }
+        }
+      });
+      return Array.from(map.values());
+    }
+
+    function deduplicatePolyBatches(list) {
+      const map = new Map();
+      (list || []).forEach(pb => {
+        const key = String(pb.polyCode || '').trim().toUpperCase();
+        if (!key) return;
+        const existing = map.get(key);
+        if (!existing) {
+          map.set(key, { ...pb, polyCode: String(pb.polyCode).trim() });
+        } else {
+          const exScore = Number(existing.discardedBlocks || 0);
+          const newScore = Number(pb.discardedBlocks || 0);
+          if (newScore >= exScore) {
+            map.set(key, { ...pb, polyCode: String(pb.polyCode).trim() });
+          }
+        }
+      });
+      return Array.from(map.values());
+    }
+
 
     function handleLogin(e) {
       e.preventDefault();
@@ -1001,10 +1055,10 @@
         const data = await res.json();
         if (data && data.status === 'ok') {
           if (data.batches && data.batches.length > 0) {
-            state.batches = data.batches.map(b => ({ ...b, date: formatDateForInput(b.date) }));
+            state.batches = deduplicateBatches(data.batches.map(b => ({ ...b, date: formatDateForInput(b.date) })));
           }
           if (data.polyBatches && data.polyBatches.length > 0) {
-            state.polyBatches = data.polyBatches.map(pb => ({ ...pb, transferDate: formatDateForInput(pb.transferDate) }));
+            state.polyBatches = deduplicatePolyBatches(data.polyBatches.map(pb => ({ ...pb, transferDate: formatDateForInput(pb.transferDate) })));
           }
           if (data.soakLogs && data.soakLogs.length > 0) state.soakLogs = data.soakLogs;
           if (data.climateLogs && data.climateLogs.length > 0) state.climateLogs = data.climateLogs;
@@ -1160,7 +1214,7 @@
       const a = Number(document.getElementById('hGradeA').value || 0);
       const b = Number(document.getElementById('hGradeB').value || 0);
       const c = Number(document.getElementById('hCull').value || 0);
-      document.getElementById('liveFreshTotalPreview').textContent = `${(a + b + c).toFixed(2)} kg`;
+      document.getElementById('liveFreshTotalPreview').textContent = `${(a + b + c).toFixed(3)} kg (${Math.round((a + b + c)*1000)} g)`;
     }
 
     function onTxTypeChange() {
@@ -1239,16 +1293,16 @@
         totalSoldRtf += sold;
       });
 
-      const totalPolyBlocks = state.polyBatches.reduce((s, pb) => s + Number(pb.blocksTransferred), 0);
+      const totalPolyBlocks = state.polyBatches.reduce((s, pb) => s + Math.max(0, Number(pb.blocksTransferred || 0) - Number(pb.discardedBlocks || 0)), 0);
       const rtfRevenue = totalSoldRtf * 200;
       const inv = computeInventoryMetrics();
 
       document.getElementById('kpiTotalBlocks').textContent = trueActiveIncubation.toLocaleString();
       document.getElementById('kpiFruiting').textContent = totalPolyBlocks.toLocaleString();
-      document.getElementById('kpiFreshInHand').textContent = `${inv.freshInHand.toFixed(2)} kg`;
-      document.getElementById('kpiTotalYieldSub').textContent = `Total Picked: ${inv.totalPickedFresh.toFixed(1)} kg`;
-      document.getElementById('kpiDriedStock').textContent = `${inv.driedInHand.toFixed(2)} kg`;
-      document.getElementById('kpiPowderStock').textContent = `${inv.powderInHand.toFixed(2)} kg`;
+      document.getElementById('kpiFreshInHand').textContent = `${inv.freshInHand.toFixed(3)} kg`;
+      document.getElementById('kpiTotalYieldSub').textContent = `Total Picked: ${inv.totalPickedFresh.toFixed(3)} kg`;
+      document.getElementById('kpiDriedStock').textContent = `${inv.driedInHand.toFixed(3)} kg`;
+      document.getElementById('kpiPowderStock').textContent = `${inv.powderInHand.toFixed(3)} kg`;
       document.getElementById('kpiTotalRevenue').textContent = `₹${(inv.totalProductSalesRevenue + rtfRevenue).toLocaleString()}`;
       document.getElementById('kpiRtfRevSub').textContent = `Prod: ₹${inv.totalProductSalesRevenue.toLocaleString()} | RTF: ₹${rtfRevenue.toLocaleString()}`;
 
@@ -1358,7 +1412,7 @@
         const isPoly = r.startsWith('Polyhouse');
         let blocks = 0;
         if (isPoly) {
-          blocks = state.polyBatches.filter(pb => pb.room === r).reduce((s, pb) => s + Number(pb.blocksTransferred), 0);
+          blocks = state.polyBatches.filter(pb => pb.room === r).reduce((s, pb) => s + Math.max(0, Number(pb.blocksTransferred || 0) - Number(pb.discardedBlocks || 0)), 0);
         } else {
           state.batches.filter(b => b.room === r).forEach(b => {
             const init = Number(b.initialBlocks || 500);
@@ -1420,7 +1474,60 @@
       renderChecklist();
     }
 
+    function renderIncubationAnnualSummary() {
+      const box = document.getElementById('incubationAnnualSummary');
+      if (!box) return;
+      let totalMade = 0, totalIncFailed = 0, totalRtfSold = 0, totalTransPoly = 0, totalTrueActive = 0;
+      state.batches.forEach(b => {
+        const init = Number(b.initialBlocks || 0);
+        const disc = Number(b.discardedBlocks || 0);
+        const sold = Number(b.soldRtfBlocks || 0);
+        const trans = Number(b.transferredBlocks || 0);
+        totalMade += init;
+        totalIncFailed += disc;
+        totalRtfSold += sold;
+        totalTransPoly += trans;
+        totalTrueActive += Math.max(0, init - (disc + sold + trans));
+      });
+      const failPct = totalMade > 0 ? ((totalIncFailed / totalMade) * 100).toFixed(1) : '0.0';
+      const successPct = totalMade > 0 ? (((totalMade - totalIncFailed) / totalMade) * 100).toFixed(1) : '0.0';
+
+      box.innerHTML = `
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">Cumulative Blocks Made</div>
+          <div class="text-xl font-mono font-bold text-white mt-0.5">${totalMade.toLocaleString()}</div>
+          <div class="text-[10px] text-slate-500">All-Time Inoculated</div>
+        </div>
+        <div class="bg-slate-950 border border-rose-500/30 rounded-xl p-3">
+          <div class="text-[10px] text-rose-300 uppercase font-semibold">Failed in Incubation</div>
+          <div class="text-xl font-mono font-bold text-rose-400 mt-0.5">${totalIncFailed.toLocaleString()}</div>
+          <div class="text-[10px] text-rose-300/80 font-mono">Failure Rate: ${failPct}%</div>
+        </div>
+        <div class="bg-slate-950 border border-emerald-500/30 rounded-xl p-3">
+          <div class="text-[10px] text-emerald-300 uppercase font-semibold">Incubation Survival</div>
+          <div class="text-xl font-mono font-bold text-emerald-400 mt-0.5">${successPct}%</div>
+          <div class="text-[10px] text-slate-400">${(totalMade - totalIncFailed).toLocaleString()} Healthy Blocks</div>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <div class="text-[10px] text-amber-300 uppercase font-semibold">Sold as RTF (@ ₹200)</div>
+          <div class="text-xl font-mono font-bold text-amber-400 mt-0.5">${totalRtfSold.toLocaleString()}</div>
+          <div class="text-[10px] text-slate-400">₹${(totalRtfSold * 200).toLocaleString()} Revenue</div>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <div class="text-[10px] text-sky-300 uppercase font-semibold">Sent to Polyhouses</div>
+          <div class="text-xl font-mono font-bold text-sky-400 mt-0.5">${totalTransPoly.toLocaleString()}</div>
+          <div class="text-[10px] text-slate-400">Opened for Fruiting</div>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <div class="text-[10px] text-emerald-300 uppercase font-semibold">Current Active Stock</div>
+          <div class="text-xl font-mono font-bold text-white mt-0.5">${totalTrueActive.toLocaleString()}</div>
+          <div class="text-[10px] text-slate-400">In Incubation Rooms</div>
+        </div>
+      `;
+    }
+
     function renderBatches(batches) {
+      renderIncubationAnnualSummary();
       const tbody = document.getElementById('batchTableBody');
       const adminMode = isAdmin();
       tbody.innerHTML = batches.map(b => {
@@ -1469,7 +1576,10 @@
       const adminMode = isAdmin();
       tbody.innerHTML = state.polyBatches.map(pb => {
         const fy = getPolyBatchFlushYields(pb.polyCode);
-        const be = pb.blocksTransferred > 0 ? ((fy.total / Number(pb.blocksTransferred)) * 100).toFixed(1) : '0.0';
+        const opened = Number(pb.blocksTransferred || 0);
+        const polyDisc = Number(pb.discardedBlocks || 0);
+        const truePolyActive = Math.max(0, opened - polyDisc);
+        const be = opened > 0 ? ((fy.total / opened) * 100).toFixed(1) : '0.0';
         const ageDays = daysBetween(pb.transferDate);
         return `
           <tr>
@@ -1482,23 +1592,41 @@
               <div class="text-[10px] font-mono text-slate-400">Opened: ${pb.transferDate}</div>
             </td>
             <td class="py-2.5 px-2 font-mono text-amber-300 font-bold">${ageDays} d</td>
-            <td class="py-2.5 px-2 font-mono text-white">${pb.blocksTransferred}</td>
-            <td class="py-2.5 px-2 font-mono text-sky-300">${fy.f1.toFixed(2)} kg</td>
-            <td class="py-2.5 px-2 font-mono text-amber-300">${fy.f2.toFixed(2)} kg</td>
-            <td class="py-2.5 px-2 font-mono text-purple-300">${fy.f3.toFixed(2)} kg</td>
-            <td class="py-2.5 px-2 font-mono text-pink-300">${fy.f4.toFixed(2)} kg</td>
-            <td class="py-2.5 px-2 font-mono font-bold text-emerald-400 text-sm">${fy.total.toFixed(2)} kg</td>
+            <td class="py-2.5 px-2 font-mono text-white">${opened}</td>
+            <td class="py-2.5 px-2">
+              <input type="number" min="0" max="${opened}" value="${polyDisc}" onchange="updatePolyBatchDiscarded('${pb.id}', this.value)" class="w-20 bg-slate-950 border border-rose-500/50 rounded px-2 py-1 font-mono text-rose-300" title="Enter spent, diseased, or damaged blocks discarded from Polyhouse" />
+            </td>
+            <td class="py-2.5 px-2 font-mono font-bold text-emerald-400 text-sm">${truePolyActive}</td>
+            <td class="py-2.5 px-2 font-mono text-sky-300">${fy.f1.toFixed(3)} kg</td>
+            <td class="py-2.5 px-2 font-mono text-amber-300">${fy.f2.toFixed(3)} kg</td>
+            <td class="py-2.5 px-2 font-mono text-purple-300">${fy.f3.toFixed(3)} kg</td>
+            <td class="py-2.5 px-2 font-mono text-pink-300">${fy.f4.toFixed(3)} kg</td>
+            <td class="py-2.5 px-2 font-mono font-bold text-emerald-400 text-sm">${fy.total.toFixed(3)} kg</td>
             <td class="py-2.5 px-2 font-mono font-bold text-emerald-300">${be}%</td>
             ${adminMode ? `<td class="py-2.5 px-2"><button onclick="deletePolyBatch('${pb.id}')" class="text-rose-400 hover:text-rose-300 text-xs">Delete</button></td>` : ''}
           </tr>
         `;
       }).join('');
 
-      const polyOpts = state.polyBatches.map(pb => `<option value="${pb.polyCode}">${pb.polyCode} (${pb.room} - ${pb.blocksTransferred} blocks)</option>`).join('');
+      const polyOpts = state.polyBatches.map(pb => {
+        const activeCnt = Math.max(0, Number(pb.blocksTransferred || 0) - Number(pb.discardedBlocks || 0));
+        return `<option value="${pb.polyCode}">${pb.polyCode} (${pb.room} - ${activeCnt} active blocks)</option>`;
+      }).join('');
       const hSelect = document.getElementById('hBatch');
       if (hSelect) hSelect.innerHTML = polyOpts;
       const sSelect = document.getElementById('sBatch');
       if (sSelect) sSelect.innerHTML = polyOpts;
+    }
+
+    function updatePolyBatchDiscarded(id, val) {
+      const pb = state.polyBatches.find(x => x.id === id);
+      if (pb) {
+        pb.discardedBlocks = Math.max(0, Number(val || 0));
+        pb.by = currentUser ? currentUser.name : 'Cultivator';
+        saveState();
+        renderAll();
+        postToGoogleSheet({ action: 'UPDATE_POLY_DISCARDED', id: id, discardedBlocks: pb.discardedBlocks, by: pb.by });
+      }
     }
 
     function renderSoakLogs() {
@@ -1555,9 +1683,14 @@
     function addBatch(e) {
       e.preventDefault();
       if (!isAdmin()) return;
+      const batchCode = document.getElementById('bCode').value.trim();
+      if (state.batches.some(b => String(b.code).trim().toUpperCase() === batchCode.toUpperCase())) {
+        alert(`Batch Code "${batchCode}" already exists! Use the Edit button on that row instead of creating a duplicate.`);
+        return;
+      }
       const newB = {
         id: 'B' + Date.now(),
-        code: document.getElementById('bCode').value.trim(),
+        code: batchCode,
         strain: document.getElementById('bStrain').value.trim(),
         room: document.getElementById('bRoom').value,
         initialBlocks: Number(document.getElementById('bCount').value),
@@ -1579,6 +1712,10 @@
     function addPolyBatch(e) {
       e.preventDefault();
       const code = document.getElementById('pbCode').value.trim();
+      if (state.polyBatches.some(pb => String(pb.polyCode).trim().toUpperCase() === code.toUpperCase())) {
+        alert(`Polyhouse Batch Code "${code}" already exists! Please enter a unique Polyhouse Batch Code.`);
+        return;
+      }
       const incCode = document.getElementById('pbSourceBatch').value;
       const room = document.getElementById('pbRoom').value;
       const count = Number(document.getElementById('pbBlocks').value);
@@ -1595,6 +1732,7 @@
         incubationBatch: incCode,
         room: room,
         blocksTransferred: count,
+        discardedBlocks: 0,
         transferDate: date,
         status: 'Active Fruiting',
         by: currentUser ? currentUser.name : 'Cultivator'
@@ -1699,7 +1837,8 @@
 
     function deleteBatch(id) {
       if (!isAdmin()) return;
-      state.batches = state.batches.filter(x => x.id !== id);
+      if (!confirm('Delete this incubation batch?')) return;
+      state.batches = state.batches.filter(x => String(x.id) !== String(id));
       saveState();
       renderAll();
       postToGoogleSheet({ action: 'SYNC_ALL', state: state });
@@ -1707,10 +1846,22 @@
 
     function deletePolyBatch(id) {
       if (!isAdmin()) return;
-      state.polyBatches = state.polyBatches.filter(x => x.id !== id);
+      if (!confirm('Delete this Polyhouse batch?')) return;
+      state.polyBatches = state.polyBatches.filter(x => String(x.id) !== String(id));
       saveState();
       renderAll();
       postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+    }
+
+    function cleanDuplicateBatchesNow() {
+      const beforeB = state.batches.length;
+      const beforePB = state.polyBatches.length;
+      state.batches = deduplicateBatches(state.batches);
+      state.polyBatches = deduplicatePolyBatches(state.polyBatches);
+      saveState();
+      renderAll();
+      postToGoogleSheet({ action: 'SYNC_ALL', state: state });
+      alert(`Cleanup complete! Removed ${beforeB - state.batches.length} duplicate Incubation row(s) and ${beforePB - state.polyBatches.length} duplicate Polyhouse row(s), and synced clean data to Google Sheets.`);
     }
 
     function renderClimateLogs(filter) {
@@ -1777,14 +1928,14 @@
             <td class="py-2 px-2 font-mono font-bold text-white">${h.batch}</td>
             <td class="py-2 px-2 text-sky-300">${h.flush}</td>
             <td class="py-2 px-2 font-mono text-slate-300">${h.gradeA} / ${h.gradeB} / ${h.cull}</td>
-            <td class="py-2 px-2 font-mono font-bold text-emerald-400">${tot.toFixed(2)} kg</td>
+            <td class="py-2 px-2 font-mono font-bold text-emerald-400">${tot.toFixed(3)} kg</td>
             <td class="py-2 px-2 font-mono text-[11px] text-slate-400">${h.by || 'N/A'}</td>
             ${adminMode ? `<td class="py-2 px-2"><button onclick="deleteHarvest('${h.id}')" class="text-rose-400 hover:text-rose-300 text-xs">Del</button></td>` : ''}
           </tr>
         `;
       }).join('');
       const tag = document.getElementById('ledgerFreshSumTag');
-      if (tag) tag.textContent = `Total: ${sumFresh.toFixed(2)} kg`;
+      if (tag) tag.textContent = `Total: ${sumFresh.toFixed(3)} kg`;
     }
 
     function addHarvestLog(e) {
@@ -1971,7 +2122,7 @@
       const rows = [['Date', 'Batch', 'Flush', 'GradeA_kg', 'GradeB_kg', 'Cull_kg', 'TotalFresh_kg', 'LoggedBy']];
       state.harvests.forEach(h => {
         const tot = Number(h.gradeA || 0) + Number(h.gradeB || 0) + Number(h.cull || 0);
-        rows.push([h.date, h.batch, h.flush, h.gradeA, h.gradeB, h.cull, tot.toFixed(2), `"${h.by || ''}"`]);
+        rows.push([h.date, h.batch, h.flush, h.gradeA, h.gradeB, h.cull, tot.toFixed(3), `"${h.by || ''}"`]);
       });
       const csv = rows.map(r => r.join(',')).join('\n');
       const a = document.createElement('a');

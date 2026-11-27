@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shiitake-farm-os-v7-ota';
+const CACHE_NAME = 'shiitake-farm-os-v9-dedup';
 const ASSETS = [
   './',
   './index.html',
