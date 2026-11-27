@@ -940,14 +940,25 @@
       (list || []).forEach(pb => {
         const key = String(pb.polyCode || '').trim().toUpperCase();
         if (!key) return;
+        const opened = Number(pb.blocksTransferred || 0);
+        let disc = Number(pb.discardedBlocks || 0);
+        // Guard against legacy date-timestamp values (> opened or > 50,000) being misread as discarded blocks
+        if (isNaN(disc) || disc < 0 || disc > opened || disc > 50000) {
+          disc = 0;
+        }
+        const cleaned = {
+          ...pb,
+          polyCode: String(pb.polyCode).trim(),
+          blocksTransferred: opened,
+          discardedBlocks: disc,
+          transferDate: formatDateForInput(pb.transferDate)
+        };
         const existing = map.get(key);
         if (!existing) {
-          map.set(key, { ...pb, polyCode: String(pb.polyCode).trim() });
+          map.set(key, cleaned);
         } else {
-          const exScore = Number(existing.discardedBlocks || 0);
-          const newScore = Number(pb.discardedBlocks || 0);
-          if (newScore >= exScore) {
-            map.set(key, { ...pb, polyCode: String(pb.polyCode).trim() });
+          if (cleaned.discardedBlocks >= existing.discardedBlocks) {
+            map.set(key, cleaned);
           }
         }
       });
@@ -1060,7 +1071,14 @@
           if (data.polyBatches && data.polyBatches.length > 0) {
             state.polyBatches = deduplicatePolyBatches(data.polyBatches.map(pb => ({ ...pb, transferDate: formatDateForInput(pb.transferDate) })));
           }
-          if (data.soakLogs && data.soakLogs.length > 0) state.soakLogs = data.soakLogs;
+          if (data.soakLogs && data.soakLogs.length > 0) {
+            state.soakLogs = data.soakLogs.map(s => ({
+              ...s,
+              soakDate: formatDateForInput(s.soakDate),
+              estPinDate: formatDateForInput(s.estPinDate),
+              estHarvestDate: formatDateForInput(s.estHarvestDate)
+            }));
+          }
           if (data.climateLogs && data.climateLogs.length > 0) state.climateLogs = data.climateLogs;
           if (data.harvests && data.harvests.length > 0) state.harvests = data.harvests;
           if (data.salesLedger && data.salesLedger.length > 0) state.salesLedger = data.salesLedger;
@@ -1636,9 +1654,9 @@
         <tr>
           <td class="py-2 px-2 font-mono font-bold text-white">${s.polyCode}</td>
           <td class="py-2 px-2 text-amber-300 font-medium">${s.flush}</td>
-          <td class="py-2 px-2 font-mono text-slate-300">${s.soakDate}</td>
-          <td class="py-2 px-2 font-mono text-sky-300">${s.estPinDate}</td>
-          <td class="py-2 px-2 font-mono text-emerald-300">${s.estHarvestDate}</td>
+          <td class="py-2 px-2 font-mono text-slate-300">${formatDateForInput(s.soakDate)}</td>
+          <td class="py-2 px-2 font-mono text-sky-300">${formatDateForInput(s.estPinDate)}</td>
+          <td class="py-2 px-2 font-mono text-emerald-300">${formatDateForInput(s.estHarvestDate)}</td>
           <td class="py-2 px-2 text-slate-300">${s.notes || '-'}</td>
           <td class="py-2 px-2 flex items-center gap-2">
             <span class="px-2 py-0.5 rounded text-[10px] font-mono ${s.status === 'Harvested' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">${s.status}</span>
